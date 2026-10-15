@@ -1,10 +1,10 @@
 import os
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
-DATABASE_URL = os.getenv("DATABASE_URL")
+
+# Путь к SQLite-файлу. На Render можно переопределить через переменную окружения,
+# указав путь внутри постоянного диска, например: /data/bot.db
+DB_PATH = os.getenv("DB_PATH", "bot.db")
 
 if not BOT_TOKEN:
     raise ValueError("BOT_TOKEN не найден в переменных окружения")
-
-if not DATABASE_URL:
-    raise ValueError("DATABASE_URL не найден в переменных окружения")
