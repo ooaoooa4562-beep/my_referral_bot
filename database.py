@@ -2,16 +2,11 @@ import secrets
 import psycopg2
 from psycopg2.extras import RealDictCursor
 
-from config import DATABASE_URL
-
-# Render отдаёт URL в формате postgres://, а psycopg2 требует postgresql://
-_db_url = DATABASE_URL
-if _db_url.startswith("postgres://"):
-    _db_url = _db_url.replace("postgres://", "postgresql://", 1)
+from config import DB_URL
 
 
 def get_conn():
-    return psycopg2.connect(_db_url, cursor_factory=RealDictCursor)
+    return psycopg2.connect(DB_URL, cursor_factory=RealDictCursor)
 
 
 def init_db():
@@ -48,7 +43,6 @@ def create_user(telegram_id: int, username: str, first_name: str) -> str:
     conn = get_conn()
     cur = conn.cursor()
 
-    # Если пользователь уже есть — обновляем username/first_name и возвращаем код
     cur.execute("SELECT referral_code FROM users WHERE telegram_id = %s", (telegram_id,))
     row = cur.fetchone()
     if row:
@@ -57,16 +51,19 @@ def create_user(telegram_id: int, username: str, first_name: str) -> str:
             (username, first_name, telegram_id),
         )
         conn.commit()
+        code = row["referral_code"]
         cur.close()
         conn.close()
-        return row["referral_code"]
+        return code
 
-    # Создаём нового
     code = secrets.token_urlsafe(6)
-    cur.execute("""
+    cur.execute(
+        """
         INSERT INTO users (telegram_id, username, first_name, referral_code)
         VALUES (%s, %s, %s, %s)
-    """, (telegram_id, username, first_name, code))
+        """,
+        (telegram_id, username, first_name, code),
+    )
     conn.commit()
     cur.close()
     conn.close()
@@ -84,7 +81,6 @@ def get_user_by_code(code: str):
 
 
 def set_referrer(new_user_id: int, referrer_id: int) -> bool:
-    """Привязывает нового пользователя к пригласившему."""
     if new_user_id == referrer_id:
         return False
 
