@@ -8,8 +8,9 @@ from database import init_db
 from handlers import start, my_ref, help
 
 
-# --- Flask-приложение для Render ---
+# --- Flask для Render (чтобы сервис не засыпал) ---
 app = Flask(__name__)
+
 
 @app.route("/")
 @app.route("/health")
@@ -31,11 +32,9 @@ def run_bot():
 
 
 def main():
-    # Бот в фоновом потоке
     bot_thread = threading.Thread(target=run_bot, daemon=True)
     bot_thread.start()
 
-    # Flask слушает порт, который даёт Render
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
 
