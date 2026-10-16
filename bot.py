@@ -4,11 +4,10 @@ import telebot
 from flask import Flask
 
 from config import BOT_TOKEN
-from database import init_db
-from handlers import start, my_ref, help
+from database import init_db, is_banned
+from handlers import start, my_ref, help, admin
 
 
-# --- Flask для Render (чтобы сервис не засыпал) ---
 app = Flask(__name__)
 
 
@@ -18,11 +17,7 @@ def health():
     return "Bot is running", 200
 
 
-# --- Инициализация бота ---
 bot = telebot.TeleBot(BOT_TOKEN)
-start.register(bot)
-my_ref.register(bot)
-help.register(bot)
 
 
 def run_bot():
@@ -32,6 +27,19 @@ def run_bot():
 
 
 def main():
+    start.register(bot)
+    my_ref.register(bot)
+    help.register(bot)
+    admin.register(bot)
+
+    # Глобальный фильтр — молчим для забаненных (после всех команд)
+    @bot.message_handler(
+        func=lambda m: is_banned(m.from_user.id),
+        content_types=["text"],
+    )
+    def block_banned(message):
+        return
+
     bot_thread = threading.Thread(target=run_bot, daemon=True)
     bot_thread.start()
 
