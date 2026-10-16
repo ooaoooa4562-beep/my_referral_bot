@@ -45,20 +45,33 @@ def register(bot):
         chat_id = call.message.chat.id
         msg_id = call.message.message_id
 
+        # --- Закрыть ---
         if action == "close":
-            bot.delete_message(chat_id, msg_id)
+            try:
+                bot.delete_message(chat_id, msg_id)
+            except Exception:
+                pass
             bot.answer_callback_query(call.id)
             return
 
+        # --- Главное меню ---
         if action == "menu":
             _admin_state.pop(call.from_user.id, None)
-            bot.edit_message_text(
-                "🛠 <b>Админ-панель</b>\n\nВыберите раздел:",
-                chat_id, msg_id, parse_mode="HTML", reply_markup=admin_menu(),
-            )
+            try:
+                bot.edit_message_text(
+                    "🛠 <b>Админ-панель</b>\n\nВыберите раздел:",
+                    chat_id, msg_id, parse_mode="HTML", reply_markup=admin_menu(),
+                )
+            except Exception:
+                bot.send_message(
+                    chat_id,
+                    "🛠 <b>Админ-панель</b>\n\nВыберите раздел:",
+                    parse_mode="HTML", reply_markup=admin_menu(),
+                )
             bot.answer_callback_query(call.id)
             return
 
+        # --- Статистика ---
         if action == "stats":
             s = get_stats()
             text = (
@@ -69,10 +82,14 @@ def register(bot):
                 f"🆕 Новых за 24 часа: <b>{s['last_24h']}</b>\n"
                 f"🚫 Забанено: <b>{s['banned']}</b>"
             )
-            bot.edit_message_text(
-                text, chat_id, msg_id, parse_mode="HTML", reply_markup=back_button(),
-            )
+            try:
+                bot.edit_message_text(
+                    text, chat_id, msg_id, parse_mode="HTML", reply_markup=back_button(),
+                )
+            except Exception:
+                pass
 
+        # --- Топ рефереров ---
         elif action == "top":
             rows = get_top_referrers(10)
             if not rows:
@@ -84,10 +101,14 @@ def register(bot):
                     uname = f"@{u['username']}" if u["username"] else ""
                     lines.append(f"{i}. {name} {uname} — <b>{u['referrals_count']}</b>")
                 text = "\n".join(lines)
-            bot.edit_message_text(
-                text, chat_id, msg_id, parse_mode="HTML", reply_markup=back_button(),
-            )
+            try:
+                bot.edit_message_text(
+                    text, chat_id, msg_id, parse_mode="HTML", reply_markup=back_button(),
+                )
+            except Exception:
+                pass
 
+        # --- Последние юзеры ---
         elif action == "recent":
             rows = get_recent_users(20)
             lines = ["👥 <b>Последние 20 пользователей</b>\n"]
@@ -99,54 +120,77 @@ def register(bot):
                     f"• {name} ({uname}){ban_mark} — код <code>{u['referral_code']}</code>, "
                     f"пригласил: {u['referrals_count']}"
                 )
-            bot.edit_message_text(
-                "\n".join(lines), chat_id, msg_id, parse_mode="HTML",
-                reply_markup=back_button(),
-            )
+            try:
+                bot.edit_message_text(
+                    "\n".join(lines), chat_id, msg_id, parse_mode="HTML",
+                    reply_markup=back_button(),
+                )
+            except Exception:
+                pass
 
+        # --- Найти юзера ---
         elif action == "find":
             _admin_state[call.from_user.id] = "find"
-            bot.edit_message_text(
-                "🔍 Введите <b>Telegram ID</b> или <b>@username</b> пользователя:",
-                chat_id, msg_id, parse_mode="HTML", reply_markup=cancel_button(),
-            )
+            try:
+                bot.edit_message_text(
+                    "🔍 Введите <b>Telegram ID</b> или <b>@username</b> пользователя:",
+                    chat_id, msg_id, parse_mode="HTML", reply_markup=cancel_button(),
+                )
+            except Exception:
+                pass
 
+        # --- Рассылка: шаг 1 ---
         elif action == "broadcast":
             _admin_state[call.from_user.id] = {"step": "text"}
-            bot.edit_message_text(
-                "📢 <b>Шаг 1/3.</b> Отправьте текст рассылки.",
-                chat_id, msg_id, parse_mode="HTML", reply_markup=cancel_button(),
-            )
+            try:
+                bot.edit_message_text(
+                    "📢 <b>Шаг 1/3.</b> Отправьте текст рассылки.",
+                    chat_id, msg_id, parse_mode="HTML", reply_markup=cancel_button(),
+                )
+            except Exception:
+                pass
 
+        # --- Рассылка: пропустить фото ---
         elif action == "broadcast_skip_photo":
             data = _admin_state.get(call.from_user.id)
-            if not isinstance(data, dict):
-                bot.answer_callback_query(call.id, "Что-то пошло не так")
+            if not isinstance(data, dict) or not data.get("text"):
+                _admin_state.pop(call.from_user.id, None)
+                bot.answer_callback_query(call.id, "Сессия истекла, начните заново")
                 return
+
             data["photo"] = None
             data["step"] = "confirm"
             _admin_state[call.from_user.id] = data
 
-            bot.delete_message(chat_id, msg_id)
+            try:
+                bot.delete_message(chat_id, msg_id)
+            except Exception:
+                pass
+
             bot.send_message(
                 chat_id,
-                "📢 <b>Шаг 3/3. Проверьте рассылку:</b>\n\n" + data["text"] + "\n\nОтправляем?",
+                "📢 <b>Шаг 3/3. Проверьте рассылку:</b>\n\n"
+                + data["text"] + "\n\nОтправляем?",
                 parse_mode="HTML",
                 reply_markup=confirm_broadcast_button(),
             )
-            bot.answer_callback_query(call.id)
 
+        # --- Рассылка: подтверждение ---
         elif action == "broadcast_confirm":
             data = _admin_state.get(call.from_user.id)
             if not isinstance(data, dict) or not data.get("text"):
-                bot.answer_callback_query(call.id, "Текст потерян, попробуйте снова")
+                _admin_state.pop(call.from_user.id, None)
+                bot.answer_callback_query(call.id, "Сессия истекла, начните заново")
                 return
 
             text = data["text"]
             photo_id = data.get("photo")
             _admin_state.pop(call.from_user.id, None)
 
-            bot.edit_message_text("📢 Рассылка запущена...", chat_id, msg_id)
+            try:
+                bot.edit_message_text("📢 Рассылка запущена...", chat_id, msg_id)
+            except Exception:
+                bot.send_message(chat_id, "📢 Рассылка запущена...")
 
             ids = get_all_user_ids(include_banned=False)
             ok, fail = 0, 0
@@ -166,50 +210,67 @@ def register(bot):
                 f"✅ Рассылка завершена.\nДоставлено: {ok}\nНе доставлено: {fail}",
             )
 
+        # --- Бан ---
         elif action.startswith("ban:"):
             uid = int(action.split(":")[1])
             if ban_user(uid):
                 bot.answer_callback_query(call.id, "🚫 Пользователь забанен")
-                bot.edit_message_reply_markup(
-                    chat_id, msg_id,
-                    reply_markup=user_actions_keyboard(uid, banned=True),
-                )
+                try:
+                    bot.edit_message_reply_markup(
+                        chat_id, msg_id,
+                        reply_markup=user_actions_keyboard(uid, banned=True),
+                    )
+                except Exception:
+                    pass
             else:
                 bot.answer_callback_query(call.id, "❌ Не удалось")
 
+        # --- Разбан ---
         elif action.startswith("unban:"):
             uid = int(action.split(":")[1])
             if unban_user(uid):
                 bot.answer_callback_query(call.id, "✅ Разбанен")
-                bot.edit_message_reply_markup(
-                    chat_id, msg_id,
-                    reply_markup=user_actions_keyboard(uid, banned=False),
-                )
+                try:
+                    bot.edit_message_reply_markup(
+                        chat_id, msg_id,
+                        reply_markup=user_actions_keyboard(uid, banned=False),
+                    )
+                except Exception:
+                    pass
             else:
                 bot.answer_callback_query(call.id, "❌ Не удалось")
 
+        # --- Удаление: подтверждение ---
         elif action.startswith("delete:"):
             uid = int(action.split(":")[1])
-            bot.edit_message_text(
-                f"🗑 Удалить пользователя <code>{uid}</code> из базы?\n"
-                f"<b>Это действие необратимо.</b>",
-                chat_id, msg_id, parse_mode="HTML",
-                reply_markup=confirm_delete_keyboard(uid),
-            )
+            try:
+                bot.edit_message_text(
+                    f"🗑 Удалить пользователя <code>{uid}</code> из базы?\n"
+                    f"<b>Это действие необратимо.</b>",
+                    chat_id, msg_id, parse_mode="HTML",
+                    reply_markup=confirm_delete_keyboard(uid),
+                )
+            except Exception:
+                pass
 
+        # --- Удаление: выполнение ---
         elif action.startswith("delete_confirm:"):
             uid = int(action.split(":")[1])
             if delete_user(uid):
-                bot.edit_message_text(
-                    f"✅ Пользователь <code>{uid}</code> удалён.",
-                    chat_id, msg_id, parse_mode="HTML",
-                    reply_markup=back_button(),
-                )
+                try:
+                    bot.edit_message_text(
+                        f"✅ Пользователь <code>{uid}</code> удалён.",
+                        chat_id, msg_id, parse_mode="HTML",
+                        reply_markup=back_button(),
+                    )
+                except Exception:
+                    pass
             else:
                 bot.answer_callback_query(call.id, "❌ Не удалось удалить")
 
         bot.answer_callback_query(call.id)
 
+    # --- Обработчик текста/фото для find и рассылки ---
     @bot.message_handler(
         func=lambda m: _admin_state.get(m.from_user.id) is not None
                       and is_admin(m.from_user.id),
@@ -222,6 +283,10 @@ def register(bot):
         if state == "find":
             _admin_state.pop(message.from_user.id, None)
             text = (message.text or "").strip()
+            if not text:
+                bot.send_message(message.chat.id, "⚠️ Отправьте ID или @username.")
+                return
+
             user = find_user(text)
             if not user:
                 bot.send_message(message.chat.id, "❌ Пользователь не найден.")
@@ -246,7 +311,7 @@ def register(bot):
             )
             return
 
-        # --- Рассылка (3 шага) ---
+        # --- Рассылка ---
         if not isinstance(state, dict):
             return
 
