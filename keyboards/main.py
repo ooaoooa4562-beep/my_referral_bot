@@ -2,7 +2,6 @@ from telebot import types
 
 
 def share_button(ref_link: str) -> types.InlineKeyboardMarkup:
-    """Инлайн-кнопка «Поделиться» с реферальной ссылкой."""
     share_text = "Заходи в бота по моей ссылке!"
     share_url = f"https://t.me/share/url?url={ref_link}&text={share_text}"
 
