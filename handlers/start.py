@@ -1,6 +1,8 @@
 from telebot import types
 
-from database import create_user, get_user_by_code, set_referrer, get_referrals_count
+from database import (
+    create_user, get_user_by_code, set_referrer, get_referrals_count, is_banned,
+)
 
 
 def extract_payload(text: str):
@@ -11,14 +13,15 @@ def extract_payload(text: str):
 def register(bot):
     @bot.message_handler(commands=["start"])
     def cmd_start(message: types.Message):
+        if is_banned(message.from_user.id):
+            return
+
         user_id = message.from_user.id
         username = message.from_user.username or ""
         first_name = message.from_user.first_name or ""
 
-        # 1. Регистрируем/обновляем пользователя
         referral_code = create_user(user_id, username, first_name)
 
-        # 2. Обрабатываем реферальный payload
         payload = extract_payload(message.text or "")
         if payload:
             referrer_id = get_user_by_code(payload)
@@ -32,7 +35,6 @@ def register(bot):
                     except Exception:
                         pass
 
-        # 3. Приветствие + реферальная ссылка
         bot_username = bot.get_me().username
         ref_link = f"https://t.me/{bot_username}?start={referral_code}"
 
