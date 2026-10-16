@@ -10,6 +10,7 @@ from database import (
 from keyboards.admin import (
     admin_menu, back_button, cancel_button,
     confirm_broadcast_button, user_actions_keyboard, confirm_delete_keyboard,
+    skip_photo_keyboard,
 )
 
 
@@ -111,30 +112,55 @@ def register(bot):
             )
 
         elif action == "broadcast":
-            _admin_state[call.from_user.id] = "broadcast"
+            _admin_state[call.from_user.id] = {"step": "text"}
             bot.edit_message_text(
-                "📢 Отправьте текст рассылки.\nОн уйдёт всем незабаненным пользователям.",
+                "📢 <b>Шаг 1/3.</b> Отправьте текст рассылки.",
                 chat_id, msg_id, parse_mode="HTML", reply_markup=cancel_button(),
             )
 
+        elif action == "broadcast_skip_photo":
+            data = _admin_state.get(call.from_user.id)
+            if not isinstance(data, dict):
+                bot.answer_callback_query(call.id, "Что-то пошло не так")
+                return
+            data["photo"] = None
+            data["step"] = "confirm"
+            _admin_state[call.from_user.id] = data
+
+            bot.delete_message(chat_id, msg_id)
+            bot.send_message(
+                chat_id,
+                "📢 <b>Шаг 3/3. Проверьте рассылку:</b>\n\n" + data["text"] + "\n\nОтправляем?",
+                parse_mode="HTML",
+                reply_markup=confirm_broadcast_button(),
+            )
+            bot.answer_callback_query(call.id)
+
         elif action == "broadcast_confirm":
             data = _admin_state.get(call.from_user.id)
-            text = data.get("text") if isinstance(data, dict) else None
-            if not text:
+            if not isinstance(data, dict) or not data.get("text"):
                 bot.answer_callback_query(call.id, "Текст потерян, попробуйте снова")
                 return
+
+            text = data["text"]
+            photo_id = data.get("photo")
             _admin_state.pop(call.from_user.id, None)
+
             bot.edit_message_text("📢 Рассылка запущена...", chat_id, msg_id)
 
             ids = get_all_user_ids(include_banned=False)
             ok, fail = 0, 0
             for uid in ids:
                 try:
-                    bot.send_message(uid, text)
+                    if photo_id:
+                        bot.send_photo(uid, photo_id, caption=text, parse_mode="HTML")
+                    else:
+                        bot.send_message(uid, text, parse_mode="HTML")
                     ok += 1
                     time.sleep(0.05)
                 except Exception:
                     fail += 1
+
             bot.send_message(
                 chat_id,
                 f"✅ Рассылка завершена.\nДоставлено: {ok}\nНе доставлено: {fail}",
@@ -186,14 +212,16 @@ def register(bot):
 
     @bot.message_handler(
         func=lambda m: _admin_state.get(m.from_user.id) is not None
-                      and is_admin(m.from_user.id)
+                      and is_admin(m.from_user.id),
+        content_types=["text", "photo"],
     )
     def handle_admin_text(message: types.Message):
         state = _admin_state.get(message.from_user.id)
-        text = (message.text or "").strip()
 
+        # --- Найти юзера ---
         if state == "find":
             _admin_state.pop(message.from_user.id, None)
+            text = (message.text or "").strip()
             user = find_user(text)
             if not user:
                 bot.send_message(message.chat.id, "❌ Пользователь не найден.")
@@ -216,12 +244,51 @@ def register(bot):
                     user["telegram_id"], banned=user["is_banned"]
                 ),
             )
+            return
 
-        elif state == "broadcast":
-            _admin_state[message.from_user.id] = {"text": text}
+        # --- Рассылка (3 шага) ---
+        if not isinstance(state, dict):
+            return
+
+        step = state.get("step")
+
+        # Шаг 1: получили текст
+        if step == "text":
+            if not message.text:
+                bot.send_message(message.chat.id, "⚠️ Отправьте именно текст.")
+                return
+            state["text"] = message.text
+            state["step"] = "photo"
+            _admin_state[message.from_user.id] = state
             bot.send_message(
                 message.chat.id,
-                f"📢 <b>Проверьте текст:</b>\n\n{text}\n\nОтправляем?",
+                "📢 <b>Шаг 2/3.</b> Отправьте фото для рассылки "
+                "или нажмите кнопку ниже, чтобы отправить без фото.",
                 parse_mode="HTML",
-                reply_markup=confirm_broadcast_button(),
-  )
+                reply_markup=skip_photo_keyboard(),
+            )
+            return
+
+        # Шаг 2: получили фото (или текст — считаем "без фото")
+        if step == "photo":
+            if message.photo:
+                state["photo"] = message.photo[-1].file_id
+            else:
+                state["photo"] = None
+
+            state["step"] = "confirm"
+            _admin_state[message.from_user.id] = state
+
+            preview = f"📢 <b>Шаг 3/3. Проверьте рассылку:</b>\n\n{state['text']}"
+            if state.get("photo"):
+                bot.send_photo(
+                    message.chat.id, state["photo"], caption=preview,
+                    parse_mode="HTML",
+                    reply_markup=confirm_broadcast_button(),
+                )
+            else:
+                bot.send_message(
+                    message.chat.id, preview, parse_mode="HTML",
+                    reply_markup=confirm_broadcast_button(),
+                )
+            return
