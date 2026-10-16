@@ -1,3 +1,3 @@
-from . import start, my_ref, help, admin
+from .main import share_button
 
-__all__ = ["start", "my_ref", "help", "admin"]
+__all__ = ["share_button"]
