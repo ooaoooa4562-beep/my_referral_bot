@@ -4,6 +4,10 @@ from urllib.parse import urlparse, urlunparse, parse_qs
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 DATABASE_URL = os.getenv("DATABASE_URL")
 
+# ID админов через запятую: "123456789,987654321"
+_admin_raw = os.getenv("ADMIN_IDS", "")
+ADMIN_IDS = [int(x.strip()) for x in _admin_raw.split(",") if x.strip().isdigit()]
+
 if not BOT_TOKEN:
     raise ValueError("BOT_TOKEN не найден в переменных окружения")
 
@@ -12,10 +16,8 @@ if not DATABASE_URL:
 
 
 def _clean_db_url(url: str) -> str:
-    """Убирает параметры, которые psycopg2 не понимает (channel_binding и пр.)."""
     parsed = urlparse(url)
     qs = parse_qs(parsed.query)
-    # Оставляем только sslmode
     allowed = {"sslmode": qs["sslmode"]} if "sslmode" in qs else {}
     new_query = "&".join(f"{k}={v[0]}" for k, v in allowed.items())
     cleaned = urlunparse(parsed._replace(query=new_query))
