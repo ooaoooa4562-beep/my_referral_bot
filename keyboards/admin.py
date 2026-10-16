@@ -64,3 +64,12 @@ def confirm_delete_keyboard(telegram_id: int) -> types.InlineKeyboardMarkup:
         types.InlineKeyboardButton("❌ Отмена", callback_data="admin:menu"),
     )
     return markup
+
+
+def skip_photo_keyboard() -> types.InlineKeyboardMarkup:
+    markup = types.InlineKeyboardMarkup()
+    markup.add(types.InlineKeyboardButton(
+        "➡️ Без фото", callback_data="admin:broadcast_skip_photo"))
+    markup.add(types.InlineKeyboardButton(
+        "❌ Отмена", callback_data="admin:menu"))
+    return markup
