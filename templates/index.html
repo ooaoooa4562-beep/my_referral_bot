@@ -184,12 +184,12 @@
         <textarea id="prompt" placeholder="Опиши картинку на английском (например: a cute cat)"></textarea>
         <button class="generate-btn" id="generate-btn" onclick="generateImage()">✨ Сгенерировать (1 токен)</button>
         
-        <div id="loader" style="display:none; text-align:center; margin-top:20px; color:var(--text-muted);">⏳ Рисую...</div>
+        <div id="loader" style="display:none; text-align:center; margin-top:20px; color:var(--text-muted);">⏳ Рисую... Это может занять до 10 секунд.</div>
         
         <div id="image-container">
             <img id="result-image" src="" alt="Результат">
             <br>
-            <a id="download-link" class="download-btn" href="#" download="generated_image.jpg" target="_blank">⬇️ Скачать картинку</a>
+            <a id="download-link" class="download-btn" href="#" download="generated_image.png" target="_blank">⬇️ Скачать картинку</a>
         </div>
     </div>
 
@@ -232,7 +232,7 @@
 
         const user = tg.initDataUnsafe.user;
         let currentBalance = 0;
-        let myRefLink = ""; // Сюда сохраним правильную ссылку
+        let myRefLink = "";
 
         function switchTab(tab) {
             document.getElementById('main-screen').style.display = 'none';
@@ -272,7 +272,6 @@
                 currentBalance = data.tokens;
                 document.getElementById('main-balance').innerText = currentBalance;
                 
-                // Сохраняем полученную ссылку
                 if (data.ref_link) {
                     myRefLink = data.ref_link;
                     document.getElementById('ref-link-text').innerText = myRefLink.replace('https://', '');
@@ -309,15 +308,17 @@
                     const img = document.getElementById('result-image');
                     const dl = document.getElementById('download-link');
                     
+                    // Тут приходит base64 (data:image/png;base64,...)
                     img.src = data.image_url;
                     dl.href = data.image_url;
+                    dl.download = `ai_image_${Date.now()}.png`;
                     
                     document.getElementById('image-container').style.display = 'block';
                 } else {
-                    tg.showAlert(data.error || "Ошибка");
+                    tg.showAlert(data.error || "Ошибка при генерации");
                 }
             } catch (e) {
-                tg.showAlert("Ошибка соединения");
+                tg.showAlert("Ошибка соединения с сервером");
             } finally {
                 document.getElementById('generate-btn').disabled = false;
                 document.getElementById('loader').style.display = 'none';
@@ -340,4 +341,4 @@
         }
     </script>
 </body>
-                </html>
+                                                                     </html>
