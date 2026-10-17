@@ -6,7 +6,7 @@ from flask import Flask, render_template, request, jsonify
 from flask_cors import CORS
 
 from config import BOT_TOKEN
-from database import init_db, is_banned, spend_token, get_tokens
+from database import init_db, is_banned, spend_token, get_tokens, get_user # <-- Добавили get_user
 from handlers import start, my_ref, help, admin, menu_buttons, dev_tools
 
 
@@ -28,8 +28,21 @@ def api_balance():
     user_id = data.get("user_id")
     if not user_id:
         return jsonify({"error": "No user_id"}), 400
-    tokens = get_tokens(int(user_id))
-    return jsonify({"tokens": tokens})
+    
+    user_id = int(user_id)
+    tokens = get_tokens(user_id)
+    
+    # Получаем данные пользователя для реф-ссылки
+    user = get_user(user_id)
+    ref_link = ""
+    if user:
+        bot_username = bot.get_me().username
+        ref_link = f"https://t.me/{bot_username}?start={user['referral_code']}"
+    
+    return jsonify({
+        "tokens": tokens,
+        "ref_link": ref_link
+    })
 
 
 @app.route("/api/generate", methods=["POST"])
@@ -51,11 +64,7 @@ def api_generate():
     try:
         encoded_prompt = quote(prompt)
         
-        # Получаем ключ из переменных окружения Render (если он есть)
         api_key = os.getenv("POLLINATIONS_API_KEY", "")
-        
-        # Формируем URL. Если ключ есть, добавляем token=...
-        # Используем model=zimage для точности и nologo=true для отключения лого
         token_param = f"&token={api_key}" if api_key else ""
         url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?model=zimage&nologo=true{token_param}"
         
@@ -68,7 +77,6 @@ def api_generate():
         })
         
     except Exception as e:
-        # В случае ошибки возвращаем токен обратно (опционально)
         return jsonify({"success": False, "error": str(e)})
 
 
