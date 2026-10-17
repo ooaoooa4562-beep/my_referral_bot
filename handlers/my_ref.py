@@ -1,6 +1,6 @@
 from telebot import types
 
-from database import get_user, is_banned
+from database import get_user, is_banned, get_tokens
 from keyboards.main import share_button
 
 
@@ -30,6 +30,7 @@ def register(bot):
         bot_username = bot.get_me().username
         ref_link = f"https://t.me/{bot_username}?start={user['referral_code']}"
         count = user['referrals_count']
+        tokens = get_tokens(message.from_user.id)
         level, progress = get_level_info(count)
 
         text = (
@@ -37,6 +38,7 @@ def register(bot):
             f"<code>{ref_link}</code>\n\n"
             f"🏅 Твой статус: <b>{level}</b>\n"
             f"👥 Приглашено друзей: <b>{count}</b>\n"
+            f"🪙 Твои токены: <b>{tokens}</b>\n"
             f"📈 {progress}"
         )
 
