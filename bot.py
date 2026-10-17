@@ -1,18 +1,17 @@
 import os
 import threading
 import telebot
-import requests
 from urllib.parse import quote
 from flask import Flask, render_template, request, jsonify
 from flask_cors import CORS
 
 from config import BOT_TOKEN
 from database import init_db, is_banned, spend_token, get_tokens
-from handlers import start, my_ref, help, admin, menu_buttons
+from handlers import start, my_ref, help, admin, menu_buttons, dev_tools
 
 
 app = Flask(__name__)
-CORS(app)  # Разрешаем запросы от Mini App
+CORS(app)
 
 bot = telebot.TeleBot(BOT_TOKEN)
 
@@ -20,7 +19,6 @@ bot = telebot.TeleBot(BOT_TOKEN)
 # --- API ДЛЯ MINI APP ---
 @app.route("/")
 def index():
-    # Отдаем HTML страницу
     return render_template("index.html")
 
 
@@ -30,7 +28,6 @@ def api_balance():
     user_id = data.get("user_id")
     if not user_id:
         return jsonify({"error": "No user_id"}), 400
-    
     tokens = get_tokens(int(user_id))
     return jsonify({"tokens": tokens})
 
@@ -40,32 +37,18 @@ def api_generate():
     data = request.json
     user_id = data.get("user_id")
     prompt = data.get("prompt")
-    
     if not user_id or not prompt:
         return jsonify({"success": False, "error": "Нет данных"}), 400
 
     user_id = int(user_id)
-
-    # 1. Пытаемся списать токен
     if not spend_token(user_id):
         return jsonify({"success": False, "error": "Недостаточно токенов"})
 
-    # 2. Делаем запрос к Pollinations.ai
     try:
-        # Переводим промпт в URL-формат
         encoded_prompt = quote(prompt)
-        
-        # ВАЖНО: Добавляем параметр model=zimage и просим убрать водяной знак
         url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?model=zimage&nologo=true"
-        
         new_balance = get_tokens(user_id)
-        
-        return jsonify({
-            "success": True, 
-            "image_url": url,
-            "new_balance": new_balance
-        })
-        
+        return jsonify({"success": True, "image_url": url, "new_balance": new_balance})
     except Exception as e:
         return jsonify({"success": False, "error": str(e)})
 
@@ -88,6 +71,7 @@ def main():
     help.register(bot)
     admin.register(bot)
     menu_buttons.register(bot)
+    dev_tools.register(bot)  # <--- Добавили регистрацию
 
     @bot.message_handler(
         func=lambda m: is_banned(m.from_user.id),
