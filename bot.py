@@ -1,12 +1,13 @@
 import os
+import base64
 import threading
 import telebot
-from urllib.parse import quote
 from flask import Flask, render_template, request, jsonify
 from flask_cors import CORS
+import requests
 
 from config import BOT_TOKEN
-from database import init_db, is_banned, spend_token, get_tokens, get_user # <-- Добавили get_user
+from database import init_db, is_banned, spend_token, get_tokens, get_user
 from handlers import start, my_ref, help, admin, menu_buttons, dev_tools
 
 
@@ -14,6 +15,10 @@ app = Flask(__name__)
 CORS(app)
 
 bot = telebot.TeleBot(BOT_TOKEN)
+
+# --- КЛЮЧИ CLOUDFLARE (Добавьте их в Render Environment) ---
+CF_ACCOUNT_ID = os.getenv("CF_ACCOUNT_ID", "")
+CF_API_TOKEN = os.getenv("CF_API_TOKEN", "")
 
 
 # --- API ДЛЯ MINI APP ---
@@ -32,7 +37,6 @@ def api_balance():
     user_id = int(user_id)
     tokens = get_tokens(user_id)
     
-    # Получаем данные пользователя для реф-ссылки
     user = get_user(user_id)
     ref_link = ""
     if user:
@@ -56,23 +60,32 @@ def api_generate():
 
     user_id = int(user_id)
 
-    # 1. Пытаемся списать токен
+    # 1. Списываем токен
     if not spend_token(user_id):
         return jsonify({"success": False, "error": "Недостаточно токенов"})
 
-    # 2. Делаем запрос к Pollinations.ai
+    # 2. Запрос к Cloudflare Workers AI (Stable Diffusion XL)
     try:
-        encoded_prompt = quote(prompt)
+        url = f"https://api.cloudflare.com/client/v4/accounts/{CF_ACCOUNT_ID}/ai/run/@cf/stabilityai/stable-diffusion-xl-base-1.0"
+        headers = {"Authorization": f"Bearer {CF_API_TOKEN}"}
+        payload = {"prompt": prompt}
+
+        response = requests.post(url, headers=headers, json=payload, timeout=60)
         
-        api_key = os.getenv("POLLINATIONS_API_KEY", "")
-        token_param = f"&token={api_key}" if api_key else ""
-        url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?model=zimage&nologo=true{token_param}"
-        
+        # Cloudflare возвращает бинарные данные (PNG) или JSON с ошибкой
+        if response.status_code != 200:
+            return jsonify({"success": False, "error": "Ошибка Cloudflare"})
+
+        # 3. Конвертируем байты в base64, чтобы отправить в браузер
+        image_bytes = response.content
+        image_base64 = base64.b64encode(image_bytes).decode("utf-8")
+        image_url = f"data:image/png;base64,{image_base64}"
+
         new_balance = get_tokens(user_id)
         
         return jsonify({
             "success": True, 
-            "image_url": url,
+            "image_url": image_url,
             "new_balance": new_balance
         })
         
