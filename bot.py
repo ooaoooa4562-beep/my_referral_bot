@@ -37,19 +37,38 @@ def api_generate():
     data = request.json
     user_id = data.get("user_id")
     prompt = data.get("prompt")
+    
     if not user_id or not prompt:
         return jsonify({"success": False, "error": "Нет данных"}), 400
 
     user_id = int(user_id)
+
+    # 1. Пытаемся списать токен
     if not spend_token(user_id):
         return jsonify({"success": False, "error": "Недостаточно токенов"})
 
+    # 2. Делаем запрос к Pollinations.ai
     try:
         encoded_prompt = quote(prompt)
-        url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?model=zimage&nologo=true"
+        
+        # Получаем ключ из переменных окружения Render (если он есть)
+        api_key = os.getenv("POLLINATIONS_API_KEY", "")
+        
+        # Формируем URL. Если ключ есть, добавляем token=...
+        # Используем model=zimage для точности и nologo=true для отключения лого
+        token_param = f"&token={api_key}" if api_key else ""
+        url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?model=zimage&nologo=true{token_param}"
+        
         new_balance = get_tokens(user_id)
-        return jsonify({"success": True, "image_url": url, "new_balance": new_balance})
+        
+        return jsonify({
+            "success": True, 
+            "image_url": url,
+            "new_balance": new_balance
+        })
+        
     except Exception as e:
+        # В случае ошибки возвращаем токен обратно (опционально)
         return jsonify({"success": False, "error": str(e)})
 
 
@@ -71,7 +90,7 @@ def main():
     help.register(bot)
     admin.register(bot)
     menu_buttons.register(bot)
-    dev_tools.register(bot)  # <--- Добавили регистрацию
+    dev_tools.register(bot)
 
     @bot.message_handler(
         func=lambda m: is_banned(m.from_user.id),
