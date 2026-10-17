@@ -216,7 +216,6 @@ def get_all_user_ids(include_banned: bool = False) -> list:
     return [r["telegram_id"] for r in rows]
 
 
-# --- НОВОЕ ДЛЯ ОБНОВЛЕНИЯ 1 ---
 def get_all_users_paginated(page: int, per_page: int = 10) -> dict:
     offset = (page - 1) * per_page
     conn = get_conn()
@@ -232,3 +231,18 @@ def get_all_users_paginated(page: int, per_page: int = 10) -> dict:
     conn.close()
     total_pages = (total + per_page - 1) // per_page if total > 0 else 1
     return {"users": rows, "total": total, "total_pages": total_pages, "page": page}
+
+
+# --- НОВОЕ ДЛЯ ОБНОВЛЕНИЯ 3 ---
+def get_users_invited_by(user_id: int) -> list:
+    """Возвращает список юзеров, которых пригласил этот пользователь."""
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute(
+        "SELECT telegram_id, first_name, username, created_at FROM users WHERE referred_by = %s ORDER BY created_at DESC",
+        (user_id,)
+    )
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+    return rows
