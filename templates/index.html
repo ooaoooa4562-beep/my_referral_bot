@@ -19,22 +19,15 @@
         body {
             background-color: var(--bg-color);
             color: var(--text-main);
-            padding-bottom: 80px; /* Место для нижнего меню */
+            padding-bottom: 80px;
             display: flex;
             flex-direction: column;
             min-height: 100vh;
         }
 
-        /* --- ШАПКА --- */
-        .header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 15px 20px;
-        }
+        .header { display: flex; align-items: center; justify-content: space-between; padding: 15px 20px; }
         .header h1 { font-size: 20px; }
 
-        /* --- БАЛАНС --- */
         .balance-card {
             background-color: var(--card-bg);
             margin: 0 15px 15px 15px;
@@ -59,7 +52,6 @@
             cursor: pointer;
         }
 
-        /* --- КНОПКИ ДЕЙСТВИЙ --- */
         .action-buttons {
             display: flex;
             flex-direction: column;
@@ -79,183 +71,84 @@
         .action-icon { width: 24px; height: 24px; fill: white; }
         .action-arrow { margin-left: auto; fill: var(--text-muted); width: 16px; height: 16px;}
 
-        /* --- ШАБЛОНЫ --- */
-        .section-header {
-            display: flex;
-            justify-content: space-between;
-            padding: 0 20px;
-            margin-bottom: 10px;
-            align-items: center;
-        }
+        .section-header { display: flex; justify-content: space-between; padding: 0 20px; margin-bottom: 10px; align-items: center; }
         .section-header h2 { font-size: 18px; }
 
-        .templates-grid {
-            display: flex;
-            gap: 10px;
-            padding: 0 15px;
-            overflow-x: auto;
-            scrollbar-width: none;
-        }
+        .templates-grid { display: flex; gap: 10px; padding: 0 15px; overflow-x: auto; scrollbar-width: none; }
         .template-card {
-            min-width: 130px;
-            height: 180px;
-            border-radius: 15px;
-            background-color: #333;
-            position: relative;
-            background-size: cover;
-            background-position: center;
-            display: flex;
-            align-items: flex-end;
-            overflow: hidden;
-            flex-shrink: 0;
+            min-width: 130px; height: 180px; border-radius: 15px; background-color: #333;
+            position: relative; background-size: cover; background-position: center;
+            display: flex; align-items: flex-end; overflow: hidden; flex-shrink: 0;
         }
         .template-card::after {
-            content: '';
-            position: absolute;
-            bottom: 0; left: 0; right: 0;
-            height: 50%;
+            content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 50%;
             background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
         }
         .template-name {
-            position: relative;
-            z-index: 1;
-            padding: 10px;
-            font-size: 14px;
-            font-weight: bold;
-            width: 100%;
-            text-align: center;
+            position: relative; z-index: 1; padding: 10px; font-size: 14px;
+            font-weight: bold; width: 100%; text-align: center;
         }
 
-        /* --- НИЖНЕЕ МЕНЮ --- */
         .bottom-nav {
-            position: fixed;
-            bottom: 0; left: 0; right: 0;
-            background-color: #1f2126;
-            display: flex;
-            justify-content: space-around;
-            padding: 10px 0;
-            border-top: 1px solid #333;
-            z-index: 100;
+            position: fixed; bottom: 0; left: 0; right: 0; background-color: #1f2126;
+            display: flex; justify-content: space-around; padding: 10px 0;
+            border-top: 1px solid #333; z-index: 100;
         }
         .nav-item {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            color: var(--text-muted);
-            font-size: 11px;
-            gap: 4px;
-            cursor: pointer;
-            width: 33%;
+            display: flex; flex-direction: column; align-items: center;
+            color: var(--text-muted); font-size: 11px; gap: 4px; cursor: pointer; width: 33%;
         }
         .nav-item svg { width: 24px; height: 24px; fill: var(--text-muted); }
         .nav-item.active { color: var(--blue-btn); }
         .nav-item.active svg { fill: var(--blue-btn); }
 
-        /* --- ЭКРАН ГЕНЕРАЦИИ --- */
-        #generation-screen {
-            display: none;
-            flex-direction: column;
-            padding: 15px;
-        }
+        #generation-screen { display: none; flex-direction: column; padding: 15px; }
         textarea {
-            width: 100%;
-            background-color: var(--card-bg);
-            border: 1px solid #333;
-            border-radius: 15px;
-            color: white;
-            padding: 15px;
-            font-size: 16px;
-            height: 120px;
-            resize: none;
-            margin-bottom: 15px;
+            width: 100%; background-color: var(--card-bg); border: 1px solid #333;
+            border-radius: 15px; color: white; padding: 15px; font-size: 16px;
+            height: 120px; resize: none; margin-bottom: 15px;
         }
         .generate-btn {
-            width: 100%;
-            padding: 15px;
-            border-radius: 15px;
-            border: none;
-            background-color: var(--blue-btn);
-            color: white;
-            font-size: 16px;
-            font-weight: bold;
-            margin-bottom: 15px;
-            cursor: pointer;
+            width: 100%; padding: 15px; border-radius: 15px; border: none;
+            background-color: var(--blue-btn); color: white; font-size: 16px;
+            font-weight: bold; margin-bottom: 15px; cursor: pointer;
         }
         .generate-btn:disabled { opacity: 0.6; }
         
         #image-container { text-align: center; display: none; margin-top: 10px; }
         #image-container img { width: 100%; border-radius: 15px; margin-bottom: 10px; }
         .download-btn {
-            display: inline-block;
-            background-color: var(--card-bg);
-            color: white;
-            text-decoration: none;
-            padding: 12px 20px;
-            border-radius: 10px;
-            font-weight: bold;
-            font-size: 14px;
-            margin-top: 5px;
+            display: inline-block; background-color: var(--card-bg); color: white;
+            text-decoration: none; padding: 12px 20px; border-radius: 10px;
+            font-weight: bold; font-size: 14px; margin-top: 5px;
         }
 
-        /* --- ЭКРАН ЗАРАБОТКА --- */
-        #earn-screen {
-            display: none;
-            flex-direction: column;
-            padding: 15px;
-        }
+        #earn-screen { display: none; flex-direction: column; padding: 15px; }
         .earn-card {
-            background-color: var(--card-bg);
-            border-radius: 15px;
-            padding: 15px;
-            margin-bottom: 15px;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
+            background-color: var(--card-bg); border-radius: 15px; padding: 15px;
+            margin-bottom: 15px; display: flex; flex-direction: column; gap: 10px;
         }
-        .earn-card-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-        }
+        .earn-card-header { display: flex; justify-content: space-between; align-items: flex-start; }
         .earn-card-title { font-size: 16px; font-weight: bold; }
         .earn-reward { color: #4cd964; font-weight: bold; font-size: 14px; }
         .earn-desc { font-size: 12px; color: var(--text-muted); }
         .ref-link-box {
-            background-color: #17181c;
-            border-radius: 10px;
-            padding: 10px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-size: 14px;
-            color: var(--text-muted);
-            margin-top: 5px;
+            background-color: #17181c; border-radius: 10px; padding: 10px;
+            display: flex; justify-content: space-between; align-items: center;
+            font-size: 14px; color: var(--text-muted); margin-top: 5px;
         }
         .invite-btn {
-            background-color: var(--blue-btn);
-            color: white;
-            border: none;
-            border-radius: 12px;
-            padding: 15px;
-            font-weight: bold;
-            font-size: 16px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 10px;
-            margin-top: 5px;
-            cursor: pointer;
+            background-color: var(--blue-btn); color: white; border: none;
+            border-radius: 12px; padding: 15px; font-weight: bold; font-size: 16px;
+            display: flex; justify-content: center; align-items: center;
+            gap: 10px; margin-top: 5px; cursor: pointer;
         }
     </style>
 </head>
 <body>
 
-    <!-- ГЛАВНЫЙ ЭКРАН -->
     <div id="main-screen">
-        <div class="header">
-            <h1>AI Студия</h1>
-        </div>
-
+        <div class="header"><h1>AI Студия</h1></div>
         <div class="balance-card">
             <div class="balance-info">
                 <div class="balance-title">Мои токены</div>
@@ -272,9 +165,7 @@
             </div>
         </div>
 
-        <div class="section-header">
-            <h2>Шаблоны</h2>
-        </div>
+        <div class="section-header"><h2>Шаблоны</h2></div>
         <div class="templates-grid">
             <div class="template-card" style="background-image: url('https://image.pollinations.ai/prompt/3d%20cartoon%20head%20of%20a%20guy?nologo=true');" onclick="useTemplate('3d cartoon head of a guy')">
                 <div class="template-name">3D голова</div>
@@ -288,7 +179,6 @@
         </div>
     </div>
 
-    <!-- ЭКРАН ГЕНЕРАЦИИ -->
     <div id="generation-screen">
         <div class="header"><h1>Генерация фото</h1></div>
         <textarea id="prompt" placeholder="Опиши картинку на английском (например: a cute cat)"></textarea>
@@ -299,15 +189,12 @@
         <div id="image-container">
             <img id="result-image" src="" alt="Результат">
             <br>
-            <!-- Кнопка скачивания картинки -->
             <a id="download-link" class="download-btn" href="#" download="generated_image.jpg" target="_blank">⬇️ Скачать картинку</a>
         </div>
     </div>
 
-    <!-- ЭКРАН ЗАРАБОТКА -->
     <div id="earn-screen">
         <div class="header"><h1>Заработать токены</h1></div>
-        
         <div class="earn-card">
             <div class="earn-card-header">
                 <div class="earn-card-title">👥 Приглашайте друзей</div>
@@ -318,13 +205,10 @@
                 <span id="ref-link-text">Загрузка...</span>
                 <svg viewBox="0 0 24 24" style="width:20px; height:20px; fill:var(--blue-btn); cursor:pointer;" onclick="copyRefLink()"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
             </div>
-            <button class="invite-btn" onclick="shareLink()">
-                Пригласить друзей
-            </button>
+            <button class="invite-btn" onclick="shareLink()">Пригласить друзей</button>
         </div>
     </div>
 
-    <!-- НИЖНЕЕ МЕНЮ -->
     <div class="bottom-nav">
         <div class="nav-item active" onclick="switchTab('main')">
             <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
@@ -348,8 +232,8 @@
 
         const user = tg.initDataUnsafe.user;
         let currentBalance = 0;
+        let myRefLink = ""; // Сюда сохраним правильную ссылку
 
-        // Переключение экранов
         function switchTab(tab) {
             document.getElementById('main-screen').style.display = 'none';
             document.getElementById('generation-screen').style.display = 'none';
@@ -371,7 +255,6 @@
             }
         }
 
-        // Вставка шаблона в текст
         function useTemplate(text) {
             document.getElementById('prompt').value = text;
             switchTab('generation');
@@ -388,6 +271,12 @@
                 const data = await response.json();
                 currentBalance = data.tokens;
                 document.getElementById('main-balance').innerText = currentBalance;
+                
+                // Сохраняем полученную ссылку
+                if (data.ref_link) {
+                    myRefLink = data.ref_link;
+                    document.getElementById('ref-link-text').innerText = myRefLink.replace('https://', '');
+                }
             } catch (e) { console.error(e); }
         }
 
@@ -435,28 +324,20 @@
             }
         }
 
-        // Функции для экрана "Заработок"
         function shareLink() {
-            if (!user) return;
-            const botUsername = tg.initDataUnsafe.bot_username || 'your_bot'; // Замените на юзернейм вашего бота
-            const link = `https://t.me/${botUsername}?start=${user.id}_ref`;
-            tg.openTelegramLink(`https://t.me/share/url?url=${link}&text=Заходи в бота, генерируй картинки!`);
+            if (!myRefLink) return;
+            tg.openTelegramLink(`https://t.me/share/url?url=${myRefLink}&text=Заходи в бота, генерируй картинки!`);
         }
 
         function copyRefLink() {
-             if (!user) return;
-             const botUsername = tg.initDataUnsafe.bot_username || 'your_bot';
-             const link = `https://t.me/${botUsername}?start=${user.id}_ref`;
-             navigator.clipboard.writeText(link);
+             if (!myRefLink) return;
+             navigator.clipboard.writeText(myRefLink);
              tg.showAlert("Ссылка скопирована!");
         }
 
-        // Инициализация
         if (user) {
-            const botUsername = tg.initDataUnsafe.bot_username || 'your_bot';
-            document.getElementById('ref-link-text').innerText = `t.me/${botUsername}?start=${user.id}_ref`;
             loadBalance();
         }
     </script>
 </body>
-</html>
+                </html>
