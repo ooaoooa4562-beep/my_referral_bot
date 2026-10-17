@@ -5,7 +5,7 @@ from flask import Flask
 
 from config import BOT_TOKEN
 from database import init_db, is_banned
-from handlers import start, my_ref, help, admin
+from handlers import start, my_ref, help, admin, menu_buttons
 
 
 app = Flask(__name__)
@@ -31,8 +31,8 @@ def main():
     my_ref.register(bot)
     help.register(bot)
     admin.register(bot)
+    menu_buttons.register(bot)
 
-    # Глобальный фильтр — молчим для забаненных (после всех команд)
     @bot.message_handler(
         func=lambda m: is_banned(m.from_user.id),
         content_types=["text"],
