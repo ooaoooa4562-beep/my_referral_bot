@@ -52,11 +52,11 @@ def api_generate():
 
     # 2. Делаем запрос к Pollinations.ai
     try:
+        # Переводим промпт в URL-формат
         encoded_prompt = quote(prompt)
-        url = f"https://image.pollinations.ai/prompt/{encoded_prompt}"
         
-        # Pollinations просто возвращает картинку. Мы возвращаем ссылку на неё.
-        # (Браузер пользователя сам ее скачает и покажет)
+        # ВАЖНО: Добавляем параметр model=zimage и просим убрать водяной знак
+        url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?model=zimage&nologo=true"
         
         new_balance = get_tokens(user_id)
         
@@ -67,7 +67,6 @@ def api_generate():
         })
         
     except Exception as e:
-        # Если ошибка, возвращаем токен обратно (опционально)
         return jsonify({"success": False, "error": str(e)})
 
 
