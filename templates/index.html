@@ -2,105 +2,381 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>AI Генератор</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
+        :root {
+            --bg-color: #17181c;
+            --card-bg: #23252a;
+            --text-main: #ffffff;
+            --text-muted: #8b8e96;
+            --blue-btn: #2299f8;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background-color: var(--tg-theme-bg-color, #ffffff);
-            color: var(--tg-theme-text-color, #000000);
-            margin: 0;
-            padding: 20px;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            padding-bottom: 80px; /* Место для нижнего меню */
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        /* --- ШАПКА --- */
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 15px 20px;
+        }
+        .header h1 { font-size: 20px; }
+
+        /* --- БАЛАНС --- */
+        .balance-card {
+            background-color: var(--card-bg);
+            margin: 0 15px 15px 15px;
+            border-radius: 15px;
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .balance-info { display: flex; flex-direction: column; gap: 5px; }
+        .balance-title { font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+        .balance-amount { font-size: 24px; font-weight: bold; display: flex; align-items: center; gap: 5px; }
+        .balance-amount svg { width: 24px; height: 24px; fill: white; }
+        .top-up-btn {
+            background-color: var(--blue-btn);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        /* --- КНОПКИ ДЕЙСТВИЙ --- */
+        .action-buttons {
+            display: flex;
+            flex-direction: column;
+            margin: 0 15px;
+            background-color: var(--card-bg);
+            border-radius: 15px;
+            margin-bottom: 20px;
+        }
+        .action-row {
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            gap: 15px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        .action-icon { width: 24px; height: 24px; fill: white; }
+        .action-arrow { margin-left: auto; fill: var(--text-muted); width: 16px; height: 16px;}
+
+        /* --- ШАБЛОНЫ --- */
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            padding: 0 20px;
+            margin-bottom: 10px;
+            align-items: center;
+        }
+        .section-header h2 { font-size: 18px; }
+
+        .templates-grid {
+            display: flex;
+            gap: 10px;
+            padding: 0 15px;
+            overflow-x: auto;
+            scrollbar-width: none;
+        }
+        .template-card {
+            min-width: 130px;
+            height: 180px;
+            border-radius: 15px;
+            background-color: #333;
+            position: relative;
+            background-size: cover;
+            background-position: center;
+            display: flex;
+            align-items: flex-end;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+        .template-card::after {
+            content: '';
+            position: absolute;
+            bottom: 0; left: 0; right: 0;
+            height: 50%;
+            background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
+        }
+        .template-name {
+            position: relative;
+            z-index: 1;
+            padding: 10px;
+            font-size: 14px;
+            font-weight: bold;
+            width: 100%;
+            text-align: center;
+        }
+
+        /* --- НИЖНЕЕ МЕНЮ --- */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0; left: 0; right: 0;
+            background-color: #1f2126;
+            display: flex;
+            justify-content: space-around;
+            padding: 10px 0;
+            border-top: 1px solid #333;
+            z-index: 100;
+        }
+        .nav-item {
             display: flex;
             flex-direction: column;
             align-items: center;
+            color: var(--text-muted);
+            font-size: 11px;
+            gap: 4px;
+            cursor: pointer;
+            width: 33%;
         }
-        .container {
-            width: 100%;
-            max-width: 400px;
-        }
-        h1 {
-            text-align: center;
-            font-size: 24px;
-        }
-        .balance {
-            text-align: center;
-            font-size: 18px;
-            margin-bottom: 20px;
-            font-weight: bold;
-            color: var(--tg-theme-button-color, #3390ec);
+        .nav-item svg { width: 24px; height: 24px; fill: var(--text-muted); }
+        .nav-item.active { color: var(--blue-btn); }
+        .nav-item.active svg { fill: var(--blue-btn); }
+
+        /* --- ЭКРАН ГЕНЕРАЦИИ --- */
+        #generation-screen {
+            display: none;
+            flex-direction: column;
+            padding: 15px;
         }
         textarea {
             width: 100%;
-            padding: 10px;
-            border-radius: 10px;
-            border: 1px solid var(--tg-theme-hint-color, #ccc);
-            background-color: var(--tg-theme-secondary-bg-color, #f0f0f0);
-            color: var(--tg-theme-text-color, #000000);
+            background-color: var(--card-bg);
+            border: 1px solid #333;
+            border-radius: 15px;
+            color: white;
+            padding: 15px;
             font-size: 16px;
-            box-sizing: border-box;
+            height: 120px;
             resize: none;
             margin-bottom: 15px;
         }
-        button {
+        .generate-btn {
             width: 100%;
             padding: 15px;
+            border-radius: 15px;
             border: none;
-            border-radius: 10px;
-            background-color: var(--tg-theme-button-color, #3390ec);
-            color: var(--tg-theme-button-text-color, #ffffff);
-            font-size: 18px;
+            background-color: var(--blue-btn);
+            color: white;
+            font-size: 16px;
             font-weight: bold;
+            margin-bottom: 15px;
             cursor: pointer;
         }
-        button:disabled {
-            opacity: 0.6;
+        .generate-btn:disabled { opacity: 0.6; }
+        
+        #image-container { text-align: center; display: none; margin-top: 10px; }
+        #image-container img { width: 100%; border-radius: 15px; margin-bottom: 10px; }
+        .download-btn {
+            display: inline-block;
+            background-color: var(--card-bg);
+            color: white;
+            text-decoration: none;
+            padding: 12px 20px;
+            border-radius: 10px;
+            font-weight: bold;
+            font-size: 14px;
+            margin-top: 5px;
         }
-        #image-container {
-            width: 100%;
-            margin-top: 20px;
+
+        /* --- ЭКРАН ЗАРАБОТКА --- */
+        #earn-screen {
             display: none;
-            text-align: center;
+            flex-direction: column;
+            padding: 15px;
         }
-        #result-image {
-            width: 100%;
+        .earn-card {
+            background-color: var(--card-bg);
             border-radius: 15px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            padding: 15px;
+            margin-bottom: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
         }
-        #loader {
-            display: none;
-            text-align: center;
-            margin-top: 20px;
-            font-size: 18px;
+        .earn-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+        .earn-card-title { font-size: 16px; font-weight: bold; }
+        .earn-reward { color: #4cd964; font-weight: bold; font-size: 14px; }
+        .earn-desc { font-size: 12px; color: var(--text-muted); }
+        .ref-link-box {
+            background-color: #17181c;
+            border-radius: 10px;
+            padding: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 14px;
+            color: var(--text-muted);
+            margin-top: 5px;
+        }
+        .invite-btn {
+            background-color: var(--blue-btn);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            padding: 15px;
+            font-weight: bold;
+            font-size: 16px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            margin-top: 5px;
+            cursor: pointer;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>🎨 AI Генератор</h1>
-        <div class="balance" id="balance">Загрузка баланса...</div>
+
+    <!-- ГЛАВНЫЙ ЭКРАН -->
+    <div id="main-screen">
+        <div class="header">
+            <h1>AI Студия</h1>
+        </div>
+
+        <div class="balance-card">
+            <div class="balance-info">
+                <div class="balance-title">Мои токены</div>
+                <div class="balance-amount"><svg viewBox="0 0 24 24"><path d="M12 2L14.5 9H22L16 13.5L18.5 21L12 16.5L5.5 21L8 13.5L2 9H9.5L12 2Z"/></svg> <span id="main-balance">0</span></div>
+            </div>
+            <button class="top-up-btn" onclick="switchTab('earn')">Пополнить</button>
+        </div>
+
+        <div class="action-buttons">
+            <div class="action-row" onclick="switchTab('generation')">
+                <svg class="action-icon" viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
+                Создать фото
+                <svg class="action-arrow" viewBox="0 0 24 24"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/></svg>
+            </div>
+        </div>
+
+        <div class="section-header">
+            <h2>Шаблоны</h2>
+        </div>
+        <div class="templates-grid">
+            <div class="template-card" style="background-image: url('https://image.pollinations.ai/prompt/3d%20cartoon%20head%20of%20a%20guy?nologo=true');" onclick="useTemplate('3d cartoon head of a guy')">
+                <div class="template-name">3D голова</div>
+            </div>
+            <div class="template-card" style="background-image: url('https://image.pollinations.ai/prompt/mortal%20kombat%20character%20portrait?nologo=true');" onclick="useTemplate('mortal kombat character portrait')">
+                <div class="template-name">Мортал Комбат</div>
+            </div>
+            <div class="template-card" style="background-image: url('https://image.pollinations.ai/prompt/plasticine%20style%20man%20face?nologo=true');" onclick="useTemplate('plasticine style man face')">
+                <div class="template-name">Пластилин</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ЭКРАН ГЕНЕРАЦИИ -->
+    <div id="generation-screen">
+        <div class="header"><h1>Генерация фото</h1></div>
+        <textarea id="prompt" placeholder="Опиши картинку на английском (например: a cute cat)"></textarea>
+        <button class="generate-btn" id="generate-btn" onclick="generateImage()">✨ Сгенерировать (1 токен)</button>
         
-        <textarea id="prompt" rows="3" placeholder="Опиши картинку, которую хочешь сгенерировать..."></textarea>
-        <button id="generate-btn" onclick="generateImage()">✨ Сгенерировать (1 токен)</button>
-        
-        <div id="loader">⏳ Генерирую картинку... Подожди ~15 секунд.</div>
+        <div id="loader" style="display:none; text-align:center; margin-top:20px; color:var(--text-muted);">⏳ Рисую...</div>
         
         <div id="image-container">
             <img id="result-image" src="" alt="Результат">
+            <br>
+            <!-- Кнопка скачивания картинки -->
+            <a id="download-link" class="download-btn" href="#" download="generated_image.jpg" target="_blank">⬇️ Скачать картинку</a>
+        </div>
+    </div>
+
+    <!-- ЭКРАН ЗАРАБОТКА -->
+    <div id="earn-screen">
+        <div class="header"><h1>Заработать токены</h1></div>
+        
+        <div class="earn-card">
+            <div class="earn-card-header">
+                <div class="earn-card-title">👥 Приглашайте друзей</div>
+                <div class="earn-reward">+1 🪙</div>
+            </div>
+            <div class="earn-desc">Получайте 1 токен за каждого друга, который перейдет по вашей ссылке и запустит бота.</div>
+            <div class="ref-link-box">
+                <span id="ref-link-text">Загрузка...</span>
+                <svg viewBox="0 0 24 24" style="width:20px; height:20px; fill:var(--blue-btn); cursor:pointer;" onclick="copyRefLink()"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
+            </div>
+            <button class="invite-btn" onclick="shareLink()">
+                Пригласить друзей
+            </button>
+        </div>
+    </div>
+
+    <!-- НИЖНЕЕ МЕНЮ -->
+    <div class="bottom-nav">
+        <div class="nav-item active" onclick="switchTab('main')">
+            <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+            Главная
+        </div>
+        <div class="nav-item" onclick="switchTab('generation')">
+            <svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+            Генерация
+        </div>
+        <div class="nav-item" onclick="switchTab('earn')">
+            <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+            Заработать
         </div>
     </div>
 
     <script>
-        // Инициализация Telegram WebApp
         let tg = window.Telegram.WebApp;
-        tg.expand(); // Разворачиваем на весь экран
+        tg.expand();
+        tg.headerColor = "#17181c";
+        tg.backgroundColor = "#17181c";
 
-        // Получаем данные пользователя
         const user = tg.initDataUnsafe.user;
         let currentBalance = 0;
 
-        // Загружаем баланс при старте
+        // Переключение экранов
+        function switchTab(tab) {
+            document.getElementById('main-screen').style.display = 'none';
+            document.getElementById('generation-screen').style.display = 'none';
+            document.getElementById('earn-screen').style.display = 'none';
+
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+
+            if (tab === 'main') {
+                document.getElementById('main-screen').style.display = 'block';
+                document.querySelectorAll('.nav-item')[0].classList.add('active');
+            }
+            if (tab === 'generation') {
+                document.getElementById('generation-screen').style.display = 'flex';
+                document.querySelectorAll('.nav-item')[1].classList.add('active');
+            }
+            if (tab === 'earn') {
+                document.getElementById('earn-screen').style.display = 'flex';
+                document.querySelectorAll('.nav-item')[2].classList.add('active');
+            }
+        }
+
+        // Вставка шаблона в текст
+        function useTemplate(text) {
+            document.getElementById('prompt').value = text;
+            switchTab('generation');
+        }
+
         async function loadBalance() {
             if (!user) return;
             try {
@@ -111,25 +387,20 @@
                 });
                 const data = await response.json();
                 currentBalance = data.tokens;
-                document.getElementById('balance').innerText = `🪙 Твои токены: ${currentBalance}`;
-            } catch (e) {
-                console.error("Ошибка загрузки баланса", e);
-            }
+                document.getElementById('main-balance').innerText = currentBalance;
+            } catch (e) { console.error(e); }
         }
 
         async function generateImage() {
             const prompt = document.getElementById('prompt').value;
-            if (!prompt) {
-                tg.showAlert("Напиши описание картинки!");
-                return;
-            }
+            if (!prompt) { tg.showAlert("Напиши описание картинки!"); return; }
 
             if (currentBalance < 1) {
                 tg.showAlert("Недостаточно токенов! Пригласи друга, чтобы получить еще.");
+                switchTab('earn');
                 return;
             }
 
-            // Блокируем кнопку
             document.getElementById('generate-btn').disabled = true;
             document.getElementById('loader').style.display = 'block';
             document.getElementById('image-container').style.display = 'none';
@@ -138,37 +409,54 @@
                 const response = await fetch('/api/generate', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        user_id: user.id, 
-                        prompt: prompt 
-                    })
+                    body: JSON.stringify({ user_id: user.id, prompt: prompt })
                 });
-
                 const data = await response.json();
 
                 if (data.success) {
-                    // Обновляем баланс
                     currentBalance = data.new_balance;
-                    document.getElementById('balance').innerText = `🪙 Твои токены: ${currentBalance}`;
+                    document.getElementById('main-balance').innerText = currentBalance;
                     
-                    // Показываем картинку
                     const img = document.getElementById('result-image');
+                    const dl = document.getElementById('download-link');
+                    
                     img.src = data.image_url;
+                    dl.href = data.image_url;
+                    
                     document.getElementById('image-container').style.display = 'block';
                 } else {
-                    tg.showAlert(data.error || "Ошибка генерации");
+                    tg.showAlert(data.error || "Ошибка");
                 }
             } catch (e) {
-                tg.showAlert("Ошибка соединения с сервером");
+                tg.showAlert("Ошибка соединения");
             } finally {
-                // Разблокируем кнопку
                 document.getElementById('generate-btn').disabled = false;
                 document.getElementById('loader').style.display = 'none';
             }
         }
 
-        // Запускаем при загрузке
-        loadBalance();
+        // Функции для экрана "Заработок"
+        function shareLink() {
+            if (!user) return;
+            const botUsername = tg.initDataUnsafe.bot_username || 'your_bot'; // Замените на юзернейм вашего бота
+            const link = `https://t.me/${botUsername}?start=${user.id}_ref`;
+            tg.openTelegramLink(`https://t.me/share/url?url=${link}&text=Заходи в бота, генерируй картинки!`);
+        }
+
+        function copyRefLink() {
+             if (!user) return;
+             const botUsername = tg.initDataUnsafe.bot_username || 'your_bot';
+             const link = `https://t.me/${botUsername}?start=${user.id}_ref`;
+             navigator.clipboard.writeText(link);
+             tg.showAlert("Ссылка скопирована!");
+        }
+
+        // Инициализация
+        if (user) {
+            const botUsername = tg.initDataUnsafe.bot_username || 'your_bot';
+            document.getElementById('ref-link-text').innerText = `t.me/${botUsername}?start=${user.id}_ref`;
+            loadBalance();
+        }
     </script>
 </body>
-  </html>
+</html>
