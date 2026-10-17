@@ -2,6 +2,7 @@ from telebot import types
 
 from database import (
     create_user, get_user_by_code, set_referrer, get_referrals_count, is_banned,
+    add_tokens, get_tokens
 )
 from keyboards.main import main_reply_menu, start_inline_menu
 
@@ -37,7 +38,9 @@ def register(bot):
         if payload:
             referrer_id = get_user_by_code(payload)
             if referrer_id and set_referrer(user_id, referrer_id):
-                # Уведомление пригласившему
+                # Начисляем токен пригласившему
+                add_tokens(referrer_id, 1)
+                
                 count = get_referrals_count(referrer_id)
                 level = get_level(count)
                 try:
@@ -45,14 +48,16 @@ def register(bot):
                         bot.send_message(
                             referrer_id,
                             f"🎉 <b>Поздравляем! Новый уровень!</b>\n\n"
-                            f"Вы пригласили {count} человек и получили статус: <b>{level}</b>!",
+                            f"Вы пригласили {count} человек и получили статус: <b>{level}</b>!\n"
+                            f"Вам начислен <b>1 токен</b>.",
                             parse_mode="HTML"
                         )
                     else:
                         bot.send_message(
                             referrer_id,
                             f"🎉 По вашей ссылке пришёл новый пользователь!\n"
-                            f"Всего приглашено: <b>{count}</b> чел.\nСтатус: {level}",
+                            f"Вам начислен <b>1 токен</b>.\n"
+                            f"Всего приглашено: <b>{count}</b> чел.",
                             parse_mode="HTML"
                         )
                 except Exception:
@@ -61,13 +66,16 @@ def register(bot):
         bot_username = bot.get_me().username
         ref_link = f"https://t.me/{bot_username}?start={referral_code}"
         count = get_referrals_count(user_id)
+        tokens = get_tokens(user_id)
         level = get_level(count)
 
         text = (
             f"👋 Привет, <b>{first_name}</b>!\n\n"
-            f"Твой текущий статус: <b>{level}</b> (приглашено: {count})\n\n"
-            f"Приглашай друзей и получай бонусы! За каждого друга — плюс к твоему уровню.\n\n"
-            f"Твоя ссылка для приглашений:\n<code>{ref_link}</code>"
+            f"🏅 Твой статус: <b>{level}</b>\n"
+            f"👥 Приглашено друзей: <b>{count}</b>\n"
+            f"🪙 Твои токены: <b>{tokens}</b>\n\n"
+            f"Приглашай друзей и получай токены для генерации картинок!\n\n"
+            f"Твоя ссылка:\n<code>{ref_link}</code>"
         )
         
         bot.send_message(
@@ -75,6 +83,6 @@ def register(bot):
             reply_markup=main_reply_menu()
         )
         bot.send_message(
-            user_id, "Выбери действие на клавиатуре ниже или нажми кнопку:",
+            user_id, "Выбери действие на клавиатуре ниже:",
             reply_markup=start_inline_menu()
-                        )
+                )
