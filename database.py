@@ -21,10 +21,13 @@ def init_db():
             referred_by     BIGINT,
             referrals_count INTEGER DEFAULT 0,
             is_banned       BOOLEAN DEFAULT FALSE,
+            tokens          INTEGER DEFAULT 0,
             created_at      TIMESTAMP DEFAULT NOW()
         )
     """)
+    # Безопасно добавляем новые колонки, если таблица уже была создана
     cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_banned BOOLEAN DEFAULT FALSE")
+    cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS tokens INTEGER DEFAULT 0")
     conn.commit()
     cur.close()
     conn.close()
@@ -233,9 +236,7 @@ def get_all_users_paginated(page: int, per_page: int = 10) -> dict:
     return {"users": rows, "total": total, "total_pages": total_pages, "page": page}
 
 
-# --- НОВОЕ ДЛЯ ОБНОВЛЕНИЯ 3 ---
 def get_users_invited_by(user_id: int) -> list:
-    """Возвращает список юзеров, которых пригласил этот пользователь."""
     conn = get_conn()
     cur = conn.cursor()
     cur.execute(
@@ -246,3 +247,35 @@ def get_users_invited_by(user_id: int) -> list:
     cur.close()
     conn.close()
     return rows
+
+
+# --- ТОКЕНЫ ---
+def add_tokens(telegram_id: int, amount: int):
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("UPDATE users SET tokens = tokens + %s WHERE telegram_id = %s", (amount, telegram_id))
+    conn.commit()
+    cur.close()
+    conn.close()
+
+
+def spend_token(telegram_id: int) -> bool:
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("SELECT tokens FROM users WHERE telegram_id = %s", (telegram_id,))
+    row = cur.fetchone()
+    
+    if row and row["tokens"] > 0:
+        cur.execute("UPDATE users SET tokens = tokens - 1 WHERE telegram_id = %s", (telegram_id,))
+        conn.commit()
+        cur.close()
+        conn.close()
+        return True
+    cur.close()
+    conn.close()
+    return False
+
+
+def get_tokens(telegram_id: int) -> int:
+    user = get_user(telegram_id)
+    return user["tokens"] if user else 0
