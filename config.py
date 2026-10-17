@@ -4,9 +4,12 @@ from urllib.parse import urlparse, urlunparse, parse_qs
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 DATABASE_URL = os.getenv("DATABASE_URL")
 
-# ID админов через запятую: "123456789,987654321"
+# ID админов (для админ-панели)
 _admin_raw = os.getenv("ADMIN_IDS", "")
 ADMIN_IDS = [int(x.strip()) for x in _admin_raw.split(",") if x.strip().isdigit()]
+
+# ID разработчиков (для выдачи токенов)
+DEV_IDS = [5095658068, 8261666607]
 
 if not BOT_TOKEN:
     raise ValueError("BOT_TOKEN не найден в переменных окружения")
