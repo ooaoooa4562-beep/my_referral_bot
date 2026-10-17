@@ -1,3 +1,3 @@
-from . import start, my_ref, help, admin, menu_buttons
+from . import start, my_ref, help, admin, menu_buttons, dev_tools
 
-__all__ = ["start", "my_ref", "help", "admin", "menu_buttons"]
+__all__ = ["start", "my_ref", "help", "admin", "menu_buttons", "dev_tools"]
