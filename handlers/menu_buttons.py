@@ -1,5 +1,5 @@
 from telebot import types
-from database import get_user, is_banned, get_users_invited_by
+from database import get_user, is_banned, get_invited_friends
 
 
 def register(bot):
@@ -37,7 +37,7 @@ def register(bot):
     def my_friends(message: types.Message):
         if is_banned(message.from_user.id):
             return
-        friends = get_users_invited_by(message.from_user.id)
+        friends = get_invited_friends(message.from_user.id)
         if not friends:
             bot.send_message(message.chat.id, "Ты пока никого не пригласил. Скинь свою ссылку друзьям!")
             return
@@ -90,4 +90,4 @@ def register(bot):
             reply_markup=types.InlineKeyboardMarkup().add(
                 types.InlineKeyboardButton("📤 Поделиться", url=f"https://t.me/share/url?url={ref_link}")
             )
-    )
+                             )
