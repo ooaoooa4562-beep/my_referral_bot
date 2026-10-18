@@ -222,6 +222,23 @@ def get_all_user_ids(include_banned: bool = False) -> list:
     return [r["telegram_id"] for r in rows]
 
 
+def get_all_users_paginated(page: int, per_page: int = 10) -> dict:
+    offset = (page - 1) * per_page
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("SELECT COUNT(*) AS c FROM users")
+    total = cur.fetchone()["c"]
+    cur.execute(
+        "SELECT telegram_id, username, first_name, is_banned, created_at FROM users ORDER BY created_at DESC LIMIT %s OFFSET %s",
+        (per_page, offset)
+    )
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+    total_pages = (total + per_page - 1) // per_page if total > 0 else 1
+    return {"users": rows, "total": total, "total_pages": total_pages, "page": page}
+
+
 # --- ТОКЕНЫ ---
 def add_tokens(telegram_id: int, amount: int):
     conn = get_conn()
