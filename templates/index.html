@@ -198,7 +198,7 @@
             <div id="loader">⏳ Создаю магию... Подожди около 15-20 секунд.</div>
         </div>
         <div id="image-container" class="animate">
-            <img id="result-image" src="" alt="Result" onload="imageLoaded()">
+            <img id="result-image" src="" alt="Result">
             <br>
             <a id="download-link" class="dl-btn" href="#" download="image.png">⬇️ Скачать</a>
         </div>
@@ -314,7 +314,6 @@
             img.src = ''; // Очищаем старую картинку
 
             try {
-                // Запрашиваем у сервера разрешение на генерацию (списываем токен)
                 const res = await fetch('/api/generate', {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ user_id: user.id, prompt: prompt })
@@ -326,8 +325,7 @@
                     balance = data.new_balance;
                     document.getElementById('balance-val').innerText = balance;
                     
-                    // Вставляем ссылку на прокси-картинку. 
-                    // Браузер сам загрузит её, и сработает событие onload
+                    // Вставляем ссылку на прокси-картинку. Браузер начнет её загружать.
                     img.src = data.image_url;
                     document.getElementById('download-link').href = data.image_url;
                     imgContainer.style.display = 'block';
@@ -343,17 +341,25 @@
             }
         }
 
-        // Срабатывает, когда картинка полностью загрузилась в браузере
+        // Срабатывает, когда картинка полностью загрузилась
         function imageLoaded() {
             document.getElementById('loader').style.display = 'none';
             document.getElementById('gen-btn').disabled = false;
         }
 
-        // Обработка ошибки загрузки картинки
-        document.getElementById('result-image').onerror = function() {
-            tg.showAlert("❌ Не удалось загрузить картинку. Попробуйте другой промпт.");
+        // Срабатывает, если картинка не загрузилась (ошибка сервера)
+        document.getElementById('result-image').onerror = async function() {
             document.getElementById('loader').style.display = 'none';
             document.getElementById('gen-btn').disabled = false;
+            
+            try {
+                // Запрашиваем текст ошибки с сервера для отладки
+                const res = await fetch(this.src);
+                const text = await res.text();
+                tg.showAlert(`Ошибка сервера (${res.status}): ${text.substring(0, 150)}`);
+            } catch (e) {
+                tg.showAlert("❌ Картинка не загрузилась. Возможно, сервер упал или оба ИИ не ответили.");
+            }
         };
 
         async function redeemPromo() {
@@ -418,4 +424,4 @@
         }
     </script>
 </body>
-                </html>
+    </html>
