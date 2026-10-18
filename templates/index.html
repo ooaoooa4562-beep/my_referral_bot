@@ -3,256 +3,292 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>AI Генератор</title>
+    <title>AI Студия</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         :root {
-            --bg-color: #17181c;
-            --card-bg: #23252a;
-            --text-main: #ffffff;
+            --bg: #0f1014;
+            --glass: rgba(255, 255, 255, 0.06);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --text: #ffffff;
             --text-muted: #8b8e96;
-            --blue-btn: #2299f8;
+            --accent: #2299f8;
+            --accent-gradient: linear-gradient(135deg, #2299f8 0%, #6a5af9 100%);
+            --success: #4cd964;
         }
 
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; -webkit-tap-highlight-color: transparent; }
 
         body {
-            background-color: var(--bg-color);
-            color: var(--text-main);
-            padding-bottom: 80px;
-            display: flex;
-            flex-direction: column;
+            background-color: var(--bg);
+            color: var(--text);
+            padding-bottom: 90px;
             min-height: 100vh;
+            /* Красивый фоновый градиент */
+            background-image: radial-gradient(circle at 10% 20%, rgba(34, 153, 248, 0.15) 0%, transparent 40%),
+                              radial-gradient(circle at 90% 80%, rgba(106, 90, 249, 0.15) 0%, transparent 40%);
+            background-attachment: fixed;
+            overflow-x: hidden;
         }
 
-        .header { display: flex; align-items: center; justify-content: space-between; padding: 15px 20px; }
-        .header h1 { font-size: 20px; }
+        /* Анимации */
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+        .animate { animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        .hidden { display: none !important; }
 
-        .balance-card {
-            background-color: var(--card-bg);
+        .header { padding: 20px 20px 10px 20px; }
+        .header h1 { font-size: 26px; font-weight: 800; letter-spacing: -0.5px; }
+
+        /* Стеклянные карточки */
+        .card {
+            background: var(--glass);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
             margin: 0 15px 15px 15px;
-            border-radius: 15px;
-            padding: 15px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+            padding: 20px;
+            transition: transform 0.2s ease, background 0.2s ease;
         }
-        .balance-info { display: flex; flex-direction: column; gap: 5px; }
-        .balance-title { font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
-        .balance-amount { font-size: 24px; font-weight: bold; display: flex; align-items: center; gap: 5px; }
-        .balance-amount svg { width: 24px; height: 24px; fill: white; }
-        .top-up-btn {
-            background-color: var(--blue-btn);
-            color: white;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-weight: bold;
-            font-size: 14px;
-            cursor: pointer;
-        }
+        .card:active { transform: scale(0.98); background: rgba(255, 255, 255, 0.09); }
 
-        .action-buttons {
-            display: flex;
-            flex-direction: column;
-            margin: 0 15px;
-            background-color: var(--card-bg);
-            border-radius: 15px;
-            margin-bottom: 20px;
+        /* Баланс */
+        .balance-row { display: flex; justify-content: space-between; align-items: center; }
+        .balance-title { font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; font-weight: 600; }
+        .balance-amount { font-size: 36px; font-weight: 800; display: flex; align-items: center; gap: 8px; }
+        .balance-amount svg { width: 32px; height: 32px; fill: url(#grad); }
+        .btn-accent {
+            background: var(--accent-gradient);
+            color: white; border: none; padding: 12px 24px; border-radius: 16px;
+            font-weight: 700; font-size: 15px; cursor: pointer;
+            box-shadow: 0 4px 15px rgba(34, 153, 248, 0.4);
+            transition: transform 0.2s;
         }
-        .action-row {
-            display: flex;
-            align-items: center;
-            padding: 15px;
-            gap: 15px;
-            font-size: 16px;
-            cursor: pointer;
+        .btn-accent:active { transform: scale(0.95); }
+
+        /* Меню действий */
+        .action-item {
+            display: flex; align-items: center; padding: 18px 0; gap: 15px;
+            font-size: 16px; font-weight: 600; cursor: pointer;
+            border-bottom: 1px solid var(--glass-border);
         }
-        .action-icon { width: 24px; height: 24px; fill: white; }
-        .action-arrow { margin-left: auto; fill: var(--text-muted); width: 16px; height: 16px;}
+        .action-item:last-child { border-bottom: none; padding-bottom: 0; }
+        .action-item:first-child { padding-top: 0; }
+        .action-icon { width: 28px; height: 28px; fill: var(--text); }
+        .action-arrow { margin-left: auto; fill: var(--text-muted); width: 20px; height: 20px; }
 
-        .section-header { display: flex; justify-content: space-between; padding: 0 20px; margin-bottom: 10px; align-items: center; }
-        .section-header h2 { font-size: 18px; }
-
-        .templates-grid { display: flex; gap: 10px; padding: 0 15px; overflow-x: auto; scrollbar-width: none; }
-        .template-card {
-            min-width: 130px; height: 180px; border-radius: 15px; background-color: #333;
+        /* Шаблоны */
+        .templates-scroll { display: flex; gap: 12px; overflow-x: auto; padding: 5px 15px 20px 15px; scrollbar-width: none; }
+        .templates-scroll::-webkit-scrollbar { display: none; }
+        .tpl-card {
+            min-width: 140px; height: 190px; border-radius: 20px;
             position: relative; background-size: cover; background-position: center;
-            display: flex; align-items: flex-end; overflow: hidden; flex-shrink: 0;
+            display: flex; align-items: flex-end; flex-shrink: 0; overflow: hidden;
+            border: 1px solid var(--glass-border);
         }
-        .template-card::after {
-            content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 50%;
-            background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
-        }
-        .template-name {
-            position: relative; z-index: 1; padding: 10px; font-size: 14px;
-            font-weight: bold; width: 100%; text-align: center;
-        }
+        .tpl-card::after { content: ''; position: absolute; inset: 0; background: linear-gradient(to top, rgba(15,16,20,0.9) 0%, transparent 60%); }
+        .tpl-name { position: relative; z-index: 1; padding: 15px 10px; font-size: 14px; font-weight: 700; width: 100%; text-align: center; }
 
+        /* Нижнее меню */
         .bottom-nav {
-            position: fixed; bottom: 0; left: 0; right: 0; background-color: #1f2126;
-            display: flex; justify-content: space-around; padding: 10px 0;
-            border-top: 1px solid #333; z-index: 100;
+            position: fixed; bottom: 0; left: 0; right: 0;
+            background: rgba(15, 16, 20, 0.85);
+            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            border-top: 1px solid var(--glass-border);
+            display: flex; justify-content: space-around; padding: 12px 0 20px 0; z-index: 100;
         }
-        .nav-item {
+        .nav-btn {
             display: flex; flex-direction: column; align-items: center;
-            color: var(--text-muted); font-size: 11px; gap: 4px; cursor: pointer; width: 33%;
+            color: var(--text-muted); font-size: 11px; font-weight: 600; gap: 4px;
+            background: none; border: none; cursor: pointer; transition: color 0.3s;
         }
-        .nav-item svg { width: 24px; height: 24px; fill: var(--text-muted); }
-        .nav-item.active { color: var(--blue-btn); }
-        .nav-item.active svg { fill: var(--blue-btn); }
+        .nav-btn svg { width: 24px; height: 24px; fill: var(--text-muted); transition: fill 0.3s; }
+        .nav-btn.active { color: var(--accent); }
+        .nav-btn.active svg { fill: var(--accent); }
 
-        #generation-screen { display: none; flex-direction: column; padding: 15px; }
-        textarea {
-            width: 100%; background-color: var(--card-bg); border: 1px solid #333;
-            border-radius: 15px; color: white; padding: 15px; font-size: 16px;
-            height: 120px; resize: none; margin-bottom: 15px;
+        /* Экран генерации */
+        .gen-textarea {
+            width: 100%; background: rgba(0,0,0,0.3); border: 1px solid var(--glass-border);
+            border-radius: 16px; color: white; padding: 15px; font-size: 16px;
+            height: 120px; resize: none; margin-bottom: 15px; outline: none; transition: border 0.3s;
         }
-        .generate-btn {
-            width: 100%; padding: 15px; border-radius: 15px; border: none;
-            background-color: var(--blue-btn); color: white; font-size: 16px;
-            font-weight: bold; margin-bottom: 15px; cursor: pointer;
+        .gen-textarea:focus { border-color: var(--accent); }
+        .gen-btn {
+            width: 100%; padding: 18px; border-radius: 16px; border: none;
+            background: var(--accent-gradient); color: white; font-size: 16px;
+            font-weight: 800; cursor: pointer; box-shadow: 0 4px 15px rgba(34, 153, 248, 0.4);
+            display: flex; justify-content: center; align-items: center; gap: 8px;
+            transition: transform 0.2s;
         }
-        .generate-btn:disabled { opacity: 0.6; }
+        .gen-btn:active { transform: scale(0.98); }
+        .gen-btn:disabled { opacity: 0.6; box-shadow: none; transform: none; }
         
-        #image-container { text-align: center; display: none; margin-top: 10px; }
-        #image-container img { width: 100%; border-radius: 15px; margin-bottom: 10px; }
-        .download-btn {
-            display: inline-block; background-color: var(--card-bg); color: white;
-            text-decoration: none; padding: 12px 20px; border-radius: 10px;
-            font-weight: bold; font-size: 14px; margin-top: 5px;
+        #loader { display: none; text-align: center; margin: 20px 0; font-weight: 600; color: var(--accent); }
+        
+        #image-container { display: none; margin-top: 20px; text-align: center; }
+        #image-container img { width: 100%; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border: 1px solid var(--glass-border); }
+        .dl-btn {
+            display: inline-block; background: var(--glass); border: 1px solid var(--glass-border);
+            color: white; text-decoration: none; padding: 14px 24px;
+            border-radius: 14px; font-weight: 700; font-size: 15px; margin-top: 15px;
         }
 
-        #earn-screen { display: none; flex-direction: column; padding: 15px; }
-        .earn-card {
-            background-color: var(--card-bg); border-radius: 15px; padding: 15px;
-            margin-bottom: 15px; display: flex; flex-direction: column; gap: 10px;
+        /* Промокоды и рефералка */
+        .input-group { display: flex; gap: 10px; margin-top: 10px; }
+        .input-group input {
+            flex: 1; background: rgba(0,0,0,0.3); border: 1px solid var(--glass-border);
+            border-radius: 14px; padding: 14px 15px; color: white; font-size: 16px; outline: none;
         }
-        .earn-card-header { display: flex; justify-content: space-between; align-items: flex-start; }
-        .earn-card-title { font-size: 16px; font-weight: bold; }
-        .earn-reward { color: #4cd964; font-weight: bold; font-size: 14px; }
-        .earn-desc { font-size: 12px; color: var(--text-muted); }
-        .ref-link-box {
-            background-color: #17181c; border-radius: 10px; padding: 10px;
-            display: flex; justify-content: space-between; align-items: center;
-            font-size: 14px; color: var(--text-muted); margin-top: 5px;
+        .input-group input:focus { border-color: var(--accent); }
+        
+        .ref-box {
+            background: rgba(0,0,0,0.3); border: 1px solid var(--glass-border);
+            border-radius: 14px; padding: 15px; display: flex; justify-content: space-between;
+            align-items: center; font-size: 14px; color: var(--text-muted); margin-top: 10px;
         }
-        .invite-btn {
-            background-color: var(--blue-btn); color: white; border: none;
-            border-radius: 12px; padding: 15px; font-weight: bold; font-size: 16px;
-            display: flex; justify-content: center; align-items: center;
-            gap: 10px; margin-top: 5px; cursor: pointer;
+        
+        .friend-item { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--glass-border); }
+        .friend-item:last-child { border-bottom: none; }
+        .friend-avatar { 
+            width: 44px; height: 44px; background: var(--accent-gradient); 
+            border-radius: 50%; display: flex; justify-content: center; align-items: center; 
+            font-weight: 800; color: white; font-size: 18px; 
         }
     </style>
 </head>
 <body>
 
-    <div id="main-screen">
+    <!-- SVG градиент для иконки токена -->
+    <svg width="0" height="0">
+        <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style="stop-color:#2299f8;stop-opacity:1" />
+            <stop offset="100%" style="stop-color:#6a5af9;stop-opacity:1" />
+        </linearGradient>
+    </svg>
+
+    <!-- ЭКРАН: ГЛАВНАЯ -->
+    <div id="screen-main" class="animate">
         <div class="header"><h1>AI Студия</h1></div>
-        <div class="balance-card">
-            <div class="balance-info">
+        
+        <div class="card balance-row">
+            <div>
                 <div class="balance-title">Мои токены</div>
-                <div class="balance-amount"><svg viewBox="0 0 24 24"><path d="M12 2L14.5 9H22L16 13.5L18.5 21L12 16.5L5.5 21L8 13.5L2 9H9.5L12 2Z"/></svg> <span id="main-balance">0</span></div>
+                <div class="balance-amount"><svg viewBox="0 0 24 24"><path d="M12 2L14.5 9H22L16 13.5L18.5 21L12 16.5L5.5 21L8 13.5L2 9H9.5L12 2Z"/></svg> <span id="balance-val">0</span></div>
             </div>
-            <button class="top-up-btn" onclick="switchTab('earn')">Пополнить</button>
+            <button class="btn-accent" onclick="switchTab('earn')">Пополнить</button>
         </div>
 
-        <div class="action-buttons">
-            <div class="action-row" onclick="switchTab('generation')">
+        <div class="card" style="padding: 15px 20px;">
+            <div class="action-item" onclick="switchTab('generation')">
                 <svg class="action-icon" viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
                 Создать фото
                 <svg class="action-arrow" viewBox="0 0 24 24"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/></svg>
             </div>
+            <div class="action-item" onclick="switchTab('earn')">
+                <svg class="action-icon" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+                Заработать токены
+                <svg class="action-arrow" viewBox="0 0 24 24"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/></svg>
+            </div>
         </div>
 
-        <div class="section-header"><h2>Шаблоны</h2></div>
-        <div class="templates-grid">
-            <div class="template-card" style="background-image: url('https://image.pollinations.ai/prompt/3d%20cartoon%20head%20of%20a%20guy?nologo=true');" onclick="useTemplate('3d cartoon head of a guy')">
-                <div class="template-name">3D голова</div>
-            </div>
-            <div class="template-card" style="background-image: url('https://image.pollinations.ai/prompt/mortal%20kombat%20character%20portrait?nologo=true');" onclick="useTemplate('mortal kombat character portrait')">
-                <div class="template-name">Мортал Комбат</div>
-            </div>
-            <div class="template-card" style="background-image: url('https://image.pollinations.ai/prompt/plasticine%20style%20man%20face?nologo=true');" onclick="useTemplate('plasticine style man face')">
-                <div class="template-name">Пластилин</div>
-            </div>
+        <div class="header" style="padding-bottom: 5px;"><h1 style="font-size: 20px;">Шаблоны</h1></div>
+        <div class="templates-scroll">
+            <div class="tpl-card" style="background-image: url('https://image.pollinations.ai/prompt/3d%20cartoon%20head%20of%20a%20guy?nologo=true');" onclick="useTemplate('3d cartoon head of a guy')"><div class="tpl-name">3D голова</div></div>
+            <div class="tpl-card" style="background-image: url('https://image.pollinations.ai/prompt/mortal%20kombat%20character%20portrait?nologo=true');" onclick="useTemplate('mortal kombat character portrait')"><div class="tpl-name">Мортал Комбат</div></div>
+            <div class="tpl-card" style="background-image: url('https://image.pollinations.ai/prompt/plasticine%20style%20man%20face?nologo=true');" onclick="useTemplate('plasticine style man face')"><div class="tpl-name">Пластилин</div></div>
         </div>
     </div>
 
-    <div id="generation-screen">
-        <div class="header"><h1>Генерация фото</h1></div>
-        <textarea id="prompt" placeholder="Опиши картинку на английском (например: a cute cat)"></textarea>
-        <button class="generate-btn" id="generate-btn" onclick="generateImage()">✨ Сгенерировать (1 токен)</button>
-        
-        <div id="loader" style="display:none; text-align:center; margin-top:20px; color:var(--text-muted);">⏳ Рисую... Это может занять до 10 секунд.</div>
-        
-        <div id="image-container">
-            <img id="result-image" src="" alt="Результат">
+    <!-- ЭКРАН: ГЕНЕРАЦИЯ -->
+    <div id="screen-generation" class="hidden animate">
+        <div class="header"><h1>Генерация</h1></div>
+        <div class="card">
+            <textarea id="prompt" class="gen-textarea" placeholder="Опиши картинку (на английском)..."></textarea>
+            <button class="gen-btn" id="gen-btn" onclick="generateImage()">✨ Сгенерировать (1 токен)</button>
+            <div id="loader">⏳ Создаю магию... Подожди немного.</div>
+        </div>
+        <div id="image-container" class="animate">
+            <img id="result-image" src="" alt="Result">
             <br>
-            <a id="download-link" class="download-btn" href="#" download="generated_image.png" target="_blank">⬇️ Скачать картинку</a>
+            <a id="download-link" class="dl-btn" href="#" download="image.png">⬇️ Скачать</a>
         </div>
     </div>
 
-    <div id="earn-screen">
-        <div class="header"><h1>Заработать токены</h1></div>
-        <div class="earn-card">
-            <div class="earn-card-header">
-                <div class="earn-card-title">👥 Приглашайте друзей</div>
-                <div class="earn-reward">+1 🪙</div>
+    <!-- ЭКРАН: ЗАРАБОТОК (ПРОМОКОДЫ + РЕФЕРАЛЫ + ДРУЗЬЯ) -->
+    <div id="screen-earn" class="hidden animate">
+        <div class="header"><h1>Заработать</h1></div>
+        
+        <!-- Промокод -->
+        <div class="card">
+            <div class="balance-title">Ввести промокод</div>
+            <div class="input-group">
+                <input type="text" id="promo-input" placeholder="Например: SUMMER2026">
+                <button class="btn-accent" onclick="redeemPromo()">ОК</button>
             </div>
-            <div class="earn-desc">Получайте 1 токен за каждого друга, который перейдет по вашей ссылке и запустит бота.</div>
-            <div class="ref-link-box">
-                <span id="ref-link-text">Загрузка...</span>
-                <svg viewBox="0 0 24 24" style="width:20px; height:20px; fill:var(--blue-btn); cursor:pointer;" onclick="copyRefLink()"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
+        </div>
+
+        <!-- Рефералка -->
+        <div class="card">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                <div style="font-weight: 800; font-size: 18px;">👥 Приглашайте друзей</div>
+                <div style="color: var(--success); font-weight: 800; font-size: 16px;">+1 🪙</div>
             </div>
-            <button class="invite-btn" onclick="shareLink()">Пригласить друзей</button>
+            <div style="font-size: 14px; color: var(--text-muted); margin-bottom: 10px;">Получайте токен за каждого друга.</div>
+            
+            <div class="ref-box">
+                <span id="ref-link-text" style="font-size: 13px;">Загрузка...</span>
+                <svg viewBox="0 0 24 24" style="width:22px; height:22px; fill:var(--accent); cursor:pointer;" onclick="copyRef()"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
+            </div>
+            <button class="gen-btn" style="margin-top: 15px; padding: 14px;" onclick="shareRef()">Пригласить друзей</button>
+            
+            <!-- Список друзей -->
+            <div style="margin-top: 25px;">
+                <div class="balance-title">Мои друзья (<span id="friends-count">0</span>)</div>
+                <div id="friends-list" style="margin-top: 10px; max-height: 250px; overflow-y: auto; padding-right: 5px;"></div>
+            </div>
         </div>
     </div>
 
+    <!-- НИЖНЕЕ МЕНЮ -->
     <div class="bottom-nav">
-        <div class="nav-item active" onclick="switchTab('main')">
+        <button class="nav-btn active" id="nav-main" onclick="switchTab('main')">
             <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
             Главная
-        </div>
-        <div class="nav-item" onclick="switchTab('generation')">
+        </button>
+        <button class="nav-btn" id="nav-generation" onclick="switchTab('generation')">
             <svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
             Генерация
-        </div>
-        <div class="nav-item" onclick="switchTab('earn')">
+        </button>
+        <button class="nav-btn" id="nav-earn" onclick="switchTab('earn')">
             <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
             Заработать
-        </div>
+        </button>
     </div>
 
     <script>
         let tg = window.Telegram.WebApp;
         tg.expand();
-        tg.headerColor = "#17181c";
-        tg.backgroundColor = "#17181c";
+        tg.headerColor = "#0f1014";
+        tg.backgroundColor = "#0f1014";
 
         const user = tg.initDataUnsafe.user;
-        let currentBalance = 0;
-        let myRefLink = "";
+        let balance = 0;
+        let refLink = "";
 
+        // Переключение вкладок с анимацией
         function switchTab(tab) {
-            document.getElementById('main-screen').style.display = 'none';
-            document.getElementById('generation-screen').style.display = 'none';
-            document.getElementById('earn-screen').style.display = 'none';
+            document.querySelectorAll('.animate').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active'));
+            
+            document.getElementById(`screen-${tab}`).classList.remove('hidden');
+            document.getElementById(`nav-${tab}`).classList.add('active');
+            
+            const screen = document.getElementById(`screen-${tab}`);
+            screen.classList.remove('animate');
+            void screen.offsetWidth; // trigger reflow для перезапуска анимации
+            screen.classList.add('animate');
 
-            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-
-            if (tab === 'main') {
-                document.getElementById('main-screen').style.display = 'block';
-                document.querySelectorAll('.nav-item')[0].classList.add('active');
-            }
-            if (tab === 'generation') {
-                document.getElementById('generation-screen').style.display = 'flex';
-                document.querySelectorAll('.nav-item')[1].classList.add('active');
-            }
-            if (tab === 'earn') {
-                document.getElementById('earn-screen').style.display = 'flex';
-                document.querySelectorAll('.nav-item')[2].classList.add('active');
-            }
+            if (tab === 'earn') loadFriends();
         }
 
         function useTemplate(text) {
@@ -260,85 +296,122 @@
             switchTab('generation');
         }
 
-        async function loadBalance() {
+        // Загрузка баланса и ссылки
+        async function loadData() {
             if (!user) return;
             try {
-                const response = await fetch('/api/balance', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                const res = await fetch('/api/balance', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ user_id: user.id })
                 });
-                const data = await response.json();
-                currentBalance = data.tokens;
-                document.getElementById('main-balance').innerText = currentBalance;
-                
-                if (data.ref_link) {
-                    myRefLink = data.ref_link;
-                    document.getElementById('ref-link-text').innerText = myRefLink.replace('https://', '');
-                }
-            } catch (e) { console.error(e); }
+                const data = await res.json();
+                balance = data.tokens;
+                document.getElementById('balance-val').innerText = balance;
+                refLink = data.ref_link;
+                document.getElementById('ref-link-text').innerText = refLink.replace('https://', '');
+            } catch (e) { console.error("Ошибка загрузки данных", e); }
         }
 
+        // Генерация картинки
         async function generateImage() {
             const prompt = document.getElementById('prompt').value;
-            if (!prompt) { tg.showAlert("Напиши описание картинки!"); return; }
+            if (!prompt) return tg.showAlert("Напиши промпт!");
+            if (balance < 1) return tg.showAlert("Недостаточно токенов!");
 
-            if (currentBalance < 1) {
-                tg.showAlert("Недостаточно токенов! Пригласи друга, чтобы получить еще.");
-                switchTab('earn');
-                return;
-            }
-
-            document.getElementById('generate-btn').disabled = true;
+            document.getElementById('gen-btn').disabled = true;
             document.getElementById('loader').style.display = 'block';
             document.getElementById('image-container').style.display = 'none';
 
             try {
-                const response = await fetch('/api/generate', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                const res = await fetch('/api/generate', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ user_id: user.id, prompt: prompt })
                 });
-                const data = await response.json();
+                const data = await res.json();
 
                 if (data.success) {
-                    currentBalance = data.new_balance;
-                    document.getElementById('main-balance').innerText = currentBalance;
-                    
-                    const img = document.getElementById('result-image');
-                    const dl = document.getElementById('download-link');
-                    
-                    // Тут приходит base64 (data:image/png;base64,...)
-                    img.src = data.image_url;
-                    dl.href = data.image_url;
-                    dl.download = `ai_image_${Date.now()}.png`;
-                    
+                    balance = data.new_balance;
+                    document.getElementById('balance-val').innerText = balance;
+                    document.getElementById('result-image').src = data.image_url;
+                    document.getElementById('download-link').href = data.image_url;
+                    document.getElementById('download-link').download = `ai_${Date.now()}.png`;
                     document.getElementById('image-container').style.display = 'block';
                 } else {
-                    tg.showAlert(data.error || "Ошибка при генерации");
+                    tg.showAlert(data.error || "Ошибка");
                 }
-            } catch (e) {
-                tg.showAlert("Ошибка соединения с сервером");
-            } finally {
-                document.getElementById('generate-btn').disabled = false;
+            } catch (e) { tg.showAlert("Ошибка сервера"); } 
+            finally {
+                document.getElementById('gen-btn').disabled = false;
                 document.getElementById('loader').style.display = 'none';
             }
         }
 
-        function shareLink() {
-            if (!myRefLink) return;
-            tg.openTelegramLink(`https://t.me/share/url?url=${myRefLink}&text=Заходи в бота, генерируй картинки!`);
+        // Активация промокода
+        async function redeemPromo() {
+            const code = document.getElementById('promo-input').value;
+            if (!code) return tg.showAlert("Введите код!");
+            
+            try {
+                const res = await fetch('/api/promo', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_id: user.id, code: code })
+                });
+                const data = await res.json();
+                
+                if (data.success) {
+                    balance = data.new_balance;
+                    document.getElementById('balance-val').innerText = balance;
+                    tg.showAlert(`✅ Успешно! +${data.reward} токенов.`);
+                    document.getElementById('promo-input').value = '';
+                } else {
+                    tg.showAlert(`❌ ${data.error}`);
+                }
+            } catch (e) { tg.showAlert("Ошибка при активации"); }
         }
 
-        function copyRefLink() {
-             if (!myRefLink) return;
-             navigator.clipboard.writeText(myRefLink);
-             tg.showAlert("Ссылка скопирована!");
+        // Загрузка списка друзей
+        async function loadFriends() {
+            try {
+                const res = await fetch('/api/friends', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_id: user.id })
+                });
+                const data = await res.json();
+                const list = document.getElementById('friends-list');
+                document.getElementById('friends-count').innerText = data.friends.length;
+                
+                if (data.friends.length === 0) {
+                    list.innerHTML = '<div style="color:var(--text-muted); font-size:14px; text-align:center; margin-top:10px;">Тут пока пусто</div>';
+                } else {
+                    list.innerHTML = data.friends.map(f => `
+                        <div class="friend-item">
+                            <div class="friend-avatar">${(f.first_name || '?')[0].toUpperCase()}</div>
+                            <div>
+                                <div style="font-weight:700; font-size:15px;">${f.first_name || 'Аноним'}</div>
+                                <div style="font-size:13px; color:var(--text-muted);">@${f.username || 'нет'}</div>
+                            </div>
+                        </div>
+                    `).join('');
+                }
+            } catch (e) { console.error(e); }
         }
 
+        // Шаринг ссылки
+        function shareRef() { 
+            if(!refLink) return;
+            tg.openTelegramLink(`https://t.me/share/url?url=${refLink}&text=Заходи в бота, генерируй картинки!`); 
+        }
+        
+        function copyRef() { 
+            if(!refLink) return;
+            navigator.clipboard.writeText(refLink); 
+            tg.showAlert("Ссылка скопирована!"); 
+        }
+
+        // Инициализация при запуске
         if (user) {
-            loadBalance();
+            loadData();
         }
     </script>
 </body>
-                                                                     </html>
+</html>
