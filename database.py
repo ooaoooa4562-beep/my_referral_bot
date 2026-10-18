@@ -288,3 +288,14 @@ def get_user_by_course_code(code: str):
     cur.close()
     conn.close()
     return row["telegram_id"] if row else None
+
+
+# --- НОВАЯ ФУНКЦИЯ ДЛЯ "МОИ ДРУЗЬЯ" ---
+def get_invited_friends(telegram_id: int) -> list:
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("SELECT first_name, username FROM users WHERE referred_by = %s", (telegram_id,))
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+    return rows
