@@ -56,7 +56,7 @@ def api_generate():
         headers = {"Authorization": f"Bearer {CF_API_TOKEN}"}
         payload = {"prompt": prompt}
 
-        response = requests.post(url, headers=headers, json=payload, timeout=60)
+        response = requests.post(url, headers=headers, json=payload, timeout=90)
         if response.status_code != 200:
             return jsonify({"success": False, "error": "Ошибка Cloudflare"})
 
