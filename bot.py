@@ -4,6 +4,7 @@ import telebot
 from flask import Flask, render_template, request, jsonify, Response
 from flask_cors import CORS
 import requests
+import urllib.parse
 
 from config import BOT_TOKEN
 from database import (
@@ -49,38 +50,45 @@ def api_generate():
     if not spend_token(user_id):
         return jsonify({"success": False, "error": "Недостаточно токенов"})
 
-    # Возвращаем не саму картинку, а ссылку на наш прокси-сервер
-    # Браузер сам скачает картинку, когда она будет готова
-    proxy_url = f"/api/proxy_image?prompt={requests.utils.quote(prompt)}"
-    
-    return jsonify({
-        "success": True, 
-        "image_url": proxy_url,
-        "new_balance": get_tokens(user_id)
-    })
+    proxy_url = f"/api/proxy_image?prompt={urllib.parse.quote(prompt)}"
+    return jsonify({"success": True, "image_url": proxy_url, "new_balance": get_tokens(user_id)})
 
 @app.route("/api/proxy_image")
 def api_proxy_image():
     prompt = request.args.get("prompt")
     if not prompt:
-        return "No prompt", 400
+        return "Нет промпта", 400
 
+    # --- ПОПЫТКА 1: Cloudflare ---
     try:
         url = f"https://api.cloudflare.com/client/v4/accounts/{CF_ACCOUNT_ID}/ai/run/@cf/stabilityai/stable-diffusion-xl-base-1.0"
         headers = {"Authorization": f"Bearer {CF_API_TOKEN}"}
         payload = {"prompt": prompt}
 
-        # Делаем запрос к Cloudflare
+        # Увеличили таймаут до 120 секунд
         response = requests.post(url, headers=headers, json=payload, timeout=120)
         
-        if response.status_code != 200:
-            return "Cloudflare Error", 500
-
-        # Отдаем картинку напрямую в браузер (потоком)
-        return Response(response.content, mimetype='image/png')
-        
+        if response.status_code == 200:
+            return Response(response.content, mimetype='image/png')
+        else:
+            print(f"⚠️ Cloudflare Error {response.status_code}: {response.text[:200]}")
     except Exception as e:
-        return str(e), 500
+        print(f"⚠️ Cloudflare Exception: {e}")
+
+    # --- ПОПЫТКА 2: Pollinations (Резерв) ---
+    try:
+        encoded_prompt = urllib.parse.quote(prompt)
+        fallback_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?model=turbo&nologo=true"
+        
+        fallback_resp = requests.get(fallback_url, timeout=120)
+        if fallback_resp.status_code == 200:
+            return Response(fallback_resp.content, mimetype='image/png')
+        else:
+            print(f"⚠️ Pollinations Error {fallback_resp.status_code}")
+    except Exception as e:
+        print(f"⚠️ Pollinations Exception: {e}")
+
+    return "Все генераторы недоступны. Проверьте ключи API.", 503
 
 @app.route("/api/promo", methods=["POST"])
 def api_promo():
