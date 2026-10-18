@@ -297,6 +297,7 @@
             } catch (e) { console.error(e); }
         }
 
+        // НОВАЯ ФУНКЦИЯ ГЕНЕРАЦИИ (без onerror)
         async function generateImage() {
             const prompt = document.getElementById('prompt').value;
             if (!prompt) return tg.showAlert("Напиши промпт!");
@@ -324,19 +325,19 @@
                     balance = data.new_balance;
                     document.getElementById('balance-val').innerText = balance;
                     
-                    // Вставляем картинку base64
                     img.src = data.image_url;
                     document.getElementById('download-link').href = data.image_url;
                     imgContainer.style.display = 'block';
                     
-                    // Лоадер выключится после загрузки картинки (onload)
+                    // Лоадер выключится сам, когда картинка загрузится (onload)
                 } else {
-                    tg.showAlert("❌ " + (data.error || "Ошибка"));
+                    // Показываем точную ошибку от сервера
+                    tg.showAlert("❌ " + data.error);
                     btn.disabled = false;
                     loader.style.display = 'none';
                 }
             } catch (e) { 
-                tg.showAlert("❌ Ошибка сети. Сервер не ответил вовремя.");
+                tg.showAlert("❌ Ошибка сети. Сервер не ответил.");
                 btn.disabled = false;
                 loader.style.display = 'none';
             }
@@ -347,12 +348,7 @@
             document.getElementById('gen-btn').disabled = false;
         }
 
-        // Убираем обработчик ошибок, который ломал всё, оставляем только базовый
-        document.getElementById('result-image').onerror = function() {
-            tg.showAlert("❌ Не удалось загрузить картинку. Попробуйте другой промпт.");
-            document.getElementById('loader').style.display = 'none';
-            document.getElementById('gen-btn').disabled = false;
-        };
+        // Обработчик onerror полностью удален
 
         async function redeemPromo() {
             const code = document.getElementById('promo-input').value;
