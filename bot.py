@@ -1,8 +1,7 @@
 import os
-import base64
 import threading
 import telebot
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, Response
 from flask_cors import CORS
 import requests
 
@@ -37,7 +36,6 @@ def api_balance():
     if user:
         bot_username = bot.get_me().username
         ref_link = f"https://t.me/{bot_username}?start={user['referral_code']}"
-    
     return jsonify({"tokens": tokens, "ref_link": ref_link})
 
 @app.route("/api/generate", methods=["POST"])
@@ -51,20 +49,38 @@ def api_generate():
     if not spend_token(user_id):
         return jsonify({"success": False, "error": "Недостаточно токенов"})
 
+    # Возвращаем не саму картинку, а ссылку на наш прокси-сервер
+    # Браузер сам скачает картинку, когда она будет готова
+    proxy_url = f"/api/proxy_image?prompt={requests.utils.quote(prompt)}"
+    
+    return jsonify({
+        "success": True, 
+        "image_url": proxy_url,
+        "new_balance": get_tokens(user_id)
+    })
+
+@app.route("/api/proxy_image")
+def api_proxy_image():
+    prompt = request.args.get("prompt")
+    if not prompt:
+        return "No prompt", 400
+
     try:
         url = f"https://api.cloudflare.com/client/v4/accounts/{CF_ACCOUNT_ID}/ai/run/@cf/stabilityai/stable-diffusion-xl-base-1.0"
         headers = {"Authorization": f"Bearer {CF_API_TOKEN}"}
         payload = {"prompt": prompt}
 
-        response = requests.post(url, headers=headers, json=payload, timeout=90)
+        # Делаем запрос к Cloudflare
+        response = requests.post(url, headers=headers, json=payload, timeout=120)
+        
         if response.status_code != 200:
-            return jsonify({"success": False, "error": "Ошибка Cloudflare"})
+            return "Cloudflare Error", 500
 
-        image_base64 = base64.b64encode(response.content).decode("utf-8")
-        image_url = f"data:image/png;base64,{image_base64}"
-        return jsonify({"success": True, "image_url": image_url, "new_balance": get_tokens(user_id)})
+        # Отдаем картинку напрямую в браузер (потоком)
+        return Response(response.content, mimetype='image/png')
+        
     except Exception as e:
-        return jsonify({"success": False, "error": str(e)})
+        return str(e), 500
 
 @app.route("/api/promo", methods=["POST"])
 def api_promo():
