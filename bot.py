@@ -1,5 +1,6 @@
 import os
 import base64
+import time
 import threading
 import telebot
 from flask import Flask, render_template, request, jsonify
@@ -20,6 +21,8 @@ bot = telebot.TeleBot(BOT_TOKEN)
 
 CF_ACCOUNT_ID = os.getenv("CF_ACCOUNT_ID", "")
 CF_API_TOKEN = os.getenv("CF_API_TOKEN", "")
+# Берем ключ из Render. Если его нет, используем анонимный.
+AIHORDE_API_KEY = os.getenv("AIHORDE_API_KEY", "0000000000")
 
 @app.route("/")
 def index():
@@ -52,25 +55,74 @@ def api_generate():
     if not spend_token(user_id):
         return jsonify({"success": False, "error": "Недостаточно токенов"})
 
-    # --- ПОПЫТКА 1: Cloudflare (Модель Lightning от ByteDance) ---
+    # --- ПОПЫТКА 1: Cloudflare ---
     try:
-        # ИСПРАВЛЕННЫЙ URL (bytedance вместо stabilityai)
         url = f"https://api.cloudflare.com/client/v4/accounts/{CF_ACCOUNT_ID}/ai/run/@cf/bytedance/stable-diffusion-xl-lightning"
         headers = {"Authorization": f"Bearer {CF_API_TOKEN}"}
         payload = {"prompt": prompt}
 
-        response = requests.post(url, headers=headers, json=payload, timeout=90)
+        response = requests.post(url, headers=headers, json=payload, timeout=60)
         
         if response.status_code == 200:
             image_base64 = base64.b64encode(response.content).decode("utf-8")
             image_url = f"data:image/png;base64,{image_base64}"
             return jsonify({"success": True, "image_url": image_url, "new_balance": get_tokens(user_id)})
         else:
-            error_text = response.text[:150] if response.text else "Empty"
-            return jsonify({"success": False, "error": f"Cloudflare Error {response.status_code}: {error_text}"})
-            
+            print(f"⚠️ Cloudflare Error {response.status_code}")
     except Exception as e:
-        return jsonify({"success": False, "error": f"Cloudflare Timeout: {str(e)}"})
+        print(f"⚠️ Cloudflare Exception: {e}")
+
+    # --- ПОПЫТКА 2: AI Horde ---
+    try:
+        payload = {
+            "prompt": prompt,
+            "params": {"width": 512, "height": 512, "steps": 20, "sampler_name": "k_euler"},
+            "nsfw": False,
+            "models": ["stable_diffusion"]
+        }
+        # Используем ключ из переменной
+        headers = {"apikey": AIHORDE_API_KEY, "Content-Type": "application/json"}
+        
+        init_resp = requests.post("https://stablehorde.net/api/v2/generate/async", json=payload, headers=headers, timeout=30)
+        
+        if init_resp.status_code == 202:
+            job_id = init_resp.json()["id"]
+            print(f"✅ AI Horde job created: {job_id}. Polling...")
+            
+            # Опрос (макс 60 секунд)
+            for _ in range(20): 
+                time.sleep(3)
+                check_resp = requests.get(f"https://stablehorde.net/api/v2/generate/check/{job_id}", timeout=10)
+                if check_resp.status_code == 200 and check_resp.json().get("done"):
+                    final_resp = requests.get(f"https://stablehorde.net/api/v2/generate/status/{job_id}", timeout=10)
+                    if final_resp.status_code == 200:
+                        generations = final_resp.json().get("generations", [])
+                        if generations:
+                            img_url = generations[0]["img"]
+                            img_data = requests.get(img_url, timeout=30).content
+                            image_base64 = base64.b64encode(img_data).decode("utf-8")
+                            image_url = f"data:image/png;base64,{image_base64}"
+                            return jsonify({"success": True, "image_url": image_url, "new_balance": get_tokens(user_id)})
+                    break
+        else:
+            print(f"⚠️ AI Horde Error {init_resp.status_code}")
+    except Exception as e:
+        print(f"⚠️ AI Horde Exception: {e}")
+
+    # --- ПОПЫТКА 3: Pollinations ---
+    try:
+        encoded_prompt = urllib.parse.quote(prompt)
+        fallback_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?model=flux&nologo=true"
+        
+        fallback_resp = requests.get(fallback_url, timeout=120)
+        if fallback_resp.status_code == 200:
+            image_base64 = base64.b64encode(fallback_resp.content).decode("utf-8")
+            image_url = f"data:image/png;base64,{image_base64}"
+            return jsonify({"success": True, "image_url": image_url, "new_balance": get_tokens(user_id)})
+    except Exception as e:
+        print(f"⚠️ Pollinations Exception: {e}")
+
+    return jsonify({"success": False, "error": "Все генераторы сейчас недоступны."})
 
 @app.route("/api/promo", methods=["POST"])
 def api_promo():
