@@ -1,6 +1,7 @@
 import os
 import base64
 import threading
+import secrets
 import telebot
 from flask import Flask, render_template, request, jsonify
 from flask_cors import CORS
@@ -8,9 +9,10 @@ import requests
 
 from config import BOT_TOKEN
 from database import (
-    init_db, is_banned, spend_token, get_tokens, get_user, add_tokens
+    init_db, is_banned, spend_token, get_tokens, get_user, add_tokens,
+    set_course_code, get_user_by_course_code, create_user, get_referrals_count
 )
-from handlers import start, my_ref, help, admin, menu_buttons
+from handlers import my_ref, help, admin, menu_buttons # Убрали start
 
 app = Flask(__name__)
 CORS(app)
@@ -18,9 +20,6 @@ bot = telebot.TeleBot(BOT_TOKEN)
 
 CF_ACCOUNT_ID = os.getenv("CF_ACCOUNT_ID", "")
 CF_API_TOKEN = os.getenv("CF_API_TOKEN", "")
-
-# Ваши ID разработчиков
-DEV_IDS = [5095658068, 8261666607]
 
 @app.route("/")
 def index():
@@ -53,7 +52,6 @@ def api_generate():
     if not spend_token(user_id):
         return jsonify({"success": False, "error": "Недостаточно токенов"})
 
-    # --- ТОЛЬКО CLOUDFLARE (Модель Lightning) ---
     try:
         url = f"https://api.cloudflare.com/client/v4/accounts/{CF_ACCOUNT_ID}/ai/run/@cf/bytedance/stable-diffusion-xl-lightning"
         headers = {"Authorization": f"Bearer {CF_API_TOKEN}"}
@@ -69,7 +67,7 @@ def api_generate():
             return jsonify({"success": False, "error": f"Ошибка Cloudflare: {response.status_code}"})
             
     except Exception as e:
-        return jsonify({"success": False, "error": "Сервер не ответил вовремя. Попробуйте позже."})
+        return jsonify({"success": False, "error": "Сервер не ответил вовремя."})
 
 @app.route("/health")
 def health():
@@ -81,17 +79,93 @@ def run_bot():
     bot.infinity_polling()
 
 def main():
-    start.register(bot)
+    # Регистрируем остальные хэндлеры (start исключен)
     my_ref.register(bot)
     help.register(bot)
     admin.register(bot)
     menu_buttons.register(bot)
 
-    # --- НОВАЯ КОМАНДА /give ---
+    # КАСТОМНЫЙ /START (с логикой курса)
+    @bot.message_handler(commands=["start"])
+    def custom_start(message: telebot.types.Message):
+        if is_banned(message.from_user.id):
+            return
+
+        user_id = message.from_user.id
+        username = message.from_user.username or ""
+        first_name = message.from_user.first_name or ""
+        
+        referral_code = create_user(user_id, username, first_name)
+
+        parts = (message.text or "").split(maxsplit=1)
+        payload = parts[1] if len(parts) > 1 else None
+
+        if payload and payload.startswith("course_"):
+            course_code = payload.replace("course_", "")
+            teacher_id = get_user_by_course_code(course_code)
+            
+            if teacher_id:
+                try:
+                    bot.send_message(
+                        teacher_id,
+                        f"🔥 <b>Новый ученик на курсе Python!</b>\n\n"
+                        f"Имя: {first_name}\n"
+                        f"Юзернейм: @{username or 'нет'}",
+                        parse_mode="HTML"
+                    )
+                except Exception:
+                    pass
+                
+                bot.send_message(
+                    user_id, 
+                    f"👋 Привет, {first_name}!\n\nТы успешно записался на курс Python. Жди инструкций!",
+                    reply_markup=menu_buttons.main_reply_menu()
+                )
+                return
+
+        bot_username = bot.get_me().username
+        ref_link = f"https://t.me/{bot_username}?start={referral_code}"
+        count = get_referrals_count(user_id)
+        tokens = get_tokens(user_id)
+        
+        text = (
+            f"👋 Привет, <b>{first_name}</b>!\n\n"
+            f"🪙 Твои токены: <b>{tokens}</b>\n\n"
+            f"Твоя ссылка для друзей:\n<code>{ref_link}</code>"
+        )
+        bot.send_message(user_id, text, parse_mode="HTML", reply_markup=menu_buttons.main_reply_menu())
+
+    # ССЫЛКА НА КУРС ДЛЯ УЧИТЕЛЯ
+    @bot.message_handler(commands=["my_course"])
+    def cmd_my_course(message: telebot.types.Message):
+        if is_banned(message.from_user.id): return
+            
+        user = get_user(message.from_user.id)
+        if not user:
+            bot.reply_to(message, "Сначала напишите /start")
+            return
+
+        course_code = user.get("course_code")
+        if not course_code:
+            course_code = secrets.token_urlsafe(6)
+            set_course_code(message.from_user.id, course_code)
+
+        bot_username = bot.get_me().username
+        course_link = f"https://t.me/{bot_username}?start=course_{course_code}"
+
+        bot.send_message(
+            message.chat.id,
+            f"🎓 <b>Твоя ссылка на курс Python:</b>\n\n"
+            f"<code>{course_link}</code>\n\n"
+            f"Отправь её ученикам. Когда они нажмут Start, тебе придет уведомление!",
+            parse_mode="HTML"
+        )
+
+    # КОМАНДА /give ДЛЯ РАЗРАБОТЧИКОВ
     @bot.message_handler(commands=["give"])
-    def cmd_give(message: types.Message):
-        if message.from_user.id not in DEV_IDS:
-            return # Игнорируем обычных юзеров
+    def cmd_give(message: telebot.types.Message):
+        if message.from_user.id not in [5095658068, 8261666607]:
+            return
 
         args = message.text.split()
         if len(args) < 2 or not args[1].isdigit():
@@ -102,12 +176,7 @@ def main():
         add_tokens(message.from_user.id, amount)
         new_balance = get_tokens(message.from_user.id)
         
-        bot.reply_to(
-            message, 
-            f"✅ Начислено <b>{amount}</b> токенов!\n"
-            f"Баланс: <b>{new_balance}</b>", 
-            parse_mode="HTML"
-        )
+        bot.reply_to(message, f"✅ Начислено <b>{amount}</b> токенов!\nБаланс: <b>{new_balance}</b>", parse_mode="HTML")
 
     @bot.message_handler(func=lambda m: is_banned(m.from_user.id), content_types=["text"])
     def block_banned(message): return
