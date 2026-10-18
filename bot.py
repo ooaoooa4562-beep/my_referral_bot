@@ -52,44 +52,25 @@ def api_generate():
     if not spend_token(user_id):
         return jsonify({"success": False, "error": "Недостаточно токенов"})
 
-    # --- ПОПЫТКА 1: Cloudflare ---
+    # --- ПОПЫТКА 1: Cloudflare (Быстрая модель Lightning) ---
     try:
-        url = f"https://api.cloudflare.com/client/v4/accounts/{CF_ACCOUNT_ID}/ai/run/@cf/stabilityai/stable-diffusion-xl-base-1.0"
+        # Используем lightning для скорости
+        url = f"https://api.cloudflare.com/client/v4/accounts/{CF_ACCOUNT_ID}/ai/run/@cf/stabilityai/stable-diffusion-xl-lightning"
         headers = {"Authorization": f"Bearer {CF_API_TOKEN}"}
         payload = {"prompt": prompt}
 
-        # Делаем запрос к Cloudflare
-        response = requests.post(url, headers=headers, json=payload, timeout=120)
+        response = requests.post(url, headers=headers, json=payload, timeout=90)
         
         if response.status_code == 200:
             image_base64 = base64.b64encode(response.content).decode("utf-8")
             image_url = f"data:image/png;base64,{image_base64}"
             return jsonify({"success": True, "image_url": image_url, "new_balance": get_tokens(user_id)})
         else:
-            # Если Cloudflare вернул ошибку (например, 400 или 500), возвращаем текст ошибки
             error_text = response.text[:150] if response.text else "Empty"
-            print(f"⚠️ Cloudflare Error {response.status_code}: {error_text}")
             return jsonify({"success": False, "error": f"Cloudflare Error {response.status_code}: {error_text}"})
             
     except Exception as e:
-        print(f"⚠️ Cloudflare Exception: {e}")
         return jsonify({"success": False, "error": f"Cloudflare Timeout: {str(e)}"})
-
-    # --- ПОПЫТКА 2: Pollinations (Резерв) ---
-    # (Если Cloudflare упал, код сюда не дойдет, так как мы уже сделали return выше.
-    #  Если вы хотите, чтобы при ошибке Cloudflare бот пробовал Pollinations, 
-    #  удалите return в блоке else выше и раскомментируйте код ниже).
-    
-    # try:
-    #     encoded_prompt = urllib.parse.quote(prompt)
-    #     fallback_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?model=flux&nologo=true"
-    #     fallback_resp = requests.get(fallback_url, timeout=120)
-    #     if fallback_resp.status_code == 200:
-    #         image_base64 = base64.b64encode(fallback_resp.content).decode("utf-8")
-    #         image_url = f"data:image/png;base64,{image_base64}"
-    #         return jsonify({"success": True, "image_url": image_url, "new_balance": get_tokens(user_id)})
-    # except Exception as e:
-    #     print(f"⚠️ Pollinations Exception: {e}")
 
 @app.route("/api/promo", methods=["POST"])
 def api_promo():
