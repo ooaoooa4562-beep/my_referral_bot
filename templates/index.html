@@ -297,7 +297,6 @@
             } catch (e) { console.error(e); }
         }
 
-        // ЛОГИКА ГЕНЕРАЦИИ
         async function generateImage() {
             const prompt = document.getElementById('prompt').value;
             if (!prompt) return tg.showAlert("Напиши промпт!");
@@ -325,10 +324,12 @@
                     balance = data.new_balance;
                     document.getElementById('balance-val').innerText = balance;
                     
-                    // Вставляем ссылку на прокси-картинку. Браузер начнет её загружать.
+                    // Вставляем картинку base64
                     img.src = data.image_url;
                     document.getElementById('download-link').href = data.image_url;
                     imgContainer.style.display = 'block';
+                    
+                    // Лоадер выключится после загрузки картинки (onload)
                 } else {
                     tg.showAlert("❌ " + (data.error || "Ошибка"));
                     btn.disabled = false;
@@ -341,25 +342,16 @@
             }
         }
 
-        // Срабатывает, когда картинка полностью загрузилась
         function imageLoaded() {
             document.getElementById('loader').style.display = 'none';
             document.getElementById('gen-btn').disabled = false;
         }
 
-        // Срабатывает, если картинка не загрузилась (ошибка сервера)
-        document.getElementById('result-image').onerror = async function() {
+        // Убираем обработчик ошибок, который ломал всё, оставляем только базовый
+        document.getElementById('result-image').onerror = function() {
+            tg.showAlert("❌ Не удалось загрузить картинку. Попробуйте другой промпт.");
             document.getElementById('loader').style.display = 'none';
             document.getElementById('gen-btn').disabled = false;
-            
-            try {
-                // Запрашиваем текст ошибки с сервера для отладки
-                const res = await fetch(this.src);
-                const text = await res.text();
-                tg.showAlert(`Ошибка сервера (${res.status}): ${text.substring(0, 150)}`);
-            } catch (e) {
-                tg.showAlert("❌ Картинка не загрузилась. Возможно, сервер упал или оба ИИ не ответили.");
-            }
         };
 
         async function redeemPromo() {
