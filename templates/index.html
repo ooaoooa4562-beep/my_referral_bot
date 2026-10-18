@@ -24,14 +24,12 @@
             color: var(--text);
             padding-bottom: 90px;
             min-height: 100vh;
-            /* Красивый фоновый градиент */
             background-image: radial-gradient(circle at 10% 20%, rgba(34, 153, 248, 0.15) 0%, transparent 40%),
                               radial-gradient(circle at 90% 80%, rgba(106, 90, 249, 0.15) 0%, transparent 40%);
             background-attachment: fixed;
             overflow-x: hidden;
         }
 
-        /* Анимации */
         @keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
         .animate { animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
         .hidden { display: none !important; }
@@ -39,7 +37,6 @@
         .header { padding: 20px 20px 10px 20px; }
         .header h1 { font-size: 26px; font-weight: 800; letter-spacing: -0.5px; }
 
-        /* Стеклянные карточки */
         .card {
             background: var(--glass);
             backdrop-filter: blur(16px);
@@ -52,7 +49,6 @@
         }
         .card:active { transform: scale(0.98); background: rgba(255, 255, 255, 0.09); }
 
-        /* Баланс */
         .balance-row { display: flex; justify-content: space-between; align-items: center; }
         .balance-title { font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; font-weight: 600; }
         .balance-amount { font-size: 36px; font-weight: 800; display: flex; align-items: center; gap: 8px; }
@@ -66,7 +62,6 @@
         }
         .btn-accent:active { transform: scale(0.95); }
 
-        /* Меню действий */
         .action-item {
             display: flex; align-items: center; padding: 18px 0; gap: 15px;
             font-size: 16px; font-weight: 600; cursor: pointer;
@@ -77,7 +72,6 @@
         .action-icon { width: 28px; height: 28px; fill: var(--text); }
         .action-arrow { margin-left: auto; fill: var(--text-muted); width: 20px; height: 20px; }
 
-        /* Шаблоны */
         .templates-scroll { display: flex; gap: 12px; overflow-x: auto; padding: 5px 15px 20px 15px; scrollbar-width: none; }
         .templates-scroll::-webkit-scrollbar { display: none; }
         .tpl-card {
@@ -89,7 +83,6 @@
         .tpl-card::after { content: ''; position: absolute; inset: 0; background: linear-gradient(to top, rgba(15,16,20,0.9) 0%, transparent 60%); }
         .tpl-name { position: relative; z-index: 1; padding: 15px 10px; font-size: 14px; font-weight: 700; width: 100%; text-align: center; }
 
-        /* Нижнее меню */
         .bottom-nav {
             position: fixed; bottom: 0; left: 0; right: 0;
             background: rgba(15, 16, 20, 0.85);
@@ -106,7 +99,6 @@
         .nav-btn.active { color: var(--accent); }
         .nav-btn.active svg { fill: var(--accent); }
 
-        /* Экран генерации */
         .gen-textarea {
             width: 100%; background: rgba(0,0,0,0.3); border: 1px solid var(--glass-border);
             border-radius: 16px; color: white; padding: 15px; font-size: 16px;
@@ -133,7 +125,6 @@
             border-radius: 14px; font-weight: 700; font-size: 15px; margin-top: 15px;
         }
 
-        /* Промокоды и рефералка */
         .input-group { display: flex; gap: 10px; margin-top: 10px; }
         .input-group input {
             flex: 1; background: rgba(0,0,0,0.3); border: 1px solid var(--glass-border);
@@ -158,7 +149,6 @@
 </head>
 <body>
 
-    <!-- SVG градиент для иконки токена -->
     <svg width="0" height="0">
         <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
             <stop offset="0%" style="stop-color:#2299f8;stop-opacity:1" />
@@ -205,20 +195,19 @@
         <div class="card">
             <textarea id="prompt" class="gen-textarea" placeholder="Опиши картинку (на английском)..."></textarea>
             <button class="gen-btn" id="gen-btn" onclick="generateImage()">✨ Сгенерировать (1 токен)</button>
-            <div id="loader">⏳ Создаю магию... Подожди немного.</div>
+            <div id="loader">⏳ Создаю магию... Подожди около 15-20 секунд.</div>
         </div>
         <div id="image-container" class="animate">
-            <img id="result-image" src="" alt="Result">
+            <img id="result-image" src="" alt="Result" onload="imageLoaded()">
             <br>
             <a id="download-link" class="dl-btn" href="#" download="image.png">⬇️ Скачать</a>
         </div>
     </div>
 
-    <!-- ЭКРАН: ЗАРАБОТОК (ПРОМОКОДЫ + РЕФЕРАЛЫ + ДРУЗЬЯ) -->
+    <!-- ЭКРАН: ЗАРАБОТОК -->
     <div id="screen-earn" class="hidden animate">
         <div class="header"><h1>Заработать</h1></div>
         
-        <!-- Промокод -->
         <div class="card">
             <div class="balance-title">Ввести промокод</div>
             <div class="input-group">
@@ -227,7 +216,6 @@
             </div>
         </div>
 
-        <!-- Рефералка -->
         <div class="card">
             <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
                 <div style="font-weight: 800; font-size: 18px;">👥 Приглашайте друзей</div>
@@ -241,7 +229,6 @@
             </div>
             <button class="gen-btn" style="margin-top: 15px; padding: 14px;" onclick="shareRef()">Пригласить друзей</button>
             
-            <!-- Список друзей -->
             <div style="margin-top: 25px;">
                 <div class="balance-title">Мои друзья (<span id="friends-count">0</span>)</div>
                 <div id="friends-list" style="margin-top: 10px; max-height: 250px; overflow-y: auto; padding-right: 5px;"></div>
@@ -275,7 +262,6 @@
         let balance = 0;
         let refLink = "";
 
-        // Переключение вкладок с анимацией
         function switchTab(tab) {
             document.querySelectorAll('.animate').forEach(el => el.classList.add('hidden'));
             document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active'));
@@ -285,7 +271,7 @@
             
             const screen = document.getElementById(`screen-${tab}`);
             screen.classList.remove('animate');
-            void screen.offsetWidth; // trigger reflow для перезапуска анимации
+            void screen.offsetWidth;
             screen.classList.add('animate');
 
             if (tab === 'earn') loadFriends();
@@ -296,7 +282,6 @@
             switchTab('generation');
         }
 
-        // Загрузка баланса и ссылки
         async function loadData() {
             if (!user) return;
             try {
@@ -309,55 +294,77 @@
                 document.getElementById('balance-val').innerText = balance;
                 refLink = data.ref_link;
                 document.getElementById('ref-link-text').innerText = refLink.replace('https://', '');
-            } catch (e) { console.error("Ошибка загрузки данных", e); }
+            } catch (e) { console.error(e); }
         }
 
-        // Генерация картинки
+        // ЛОГИКА ГЕНЕРАЦИИ
         async function generateImage() {
             const prompt = document.getElementById('prompt').value;
             if (!prompt) return tg.showAlert("Напиши промпт!");
-            if (balance < 1) return tg.showAlert("Недостаточно токенов!");
+            if (balance < 1) return tg.showAlert("Нет токенов! Пригласи друга.");
 
-            document.getElementById('gen-btn').disabled = true;
-            document.getElementById('loader').style.display = 'block';
-            document.getElementById('image-container').style.display = 'none';
+            const btn = document.getElementById('gen-btn');
+            const loader = document.getElementById('loader');
+            const imgContainer = document.getElementById('image-container');
+            const img = document.getElementById('result-image');
+            
+            btn.disabled = true;
+            loader.style.display = 'block';
+            imgContainer.style.display = 'none';
+            img.src = ''; // Очищаем старую картинку
 
             try {
+                // Запрашиваем у сервера разрешение на генерацию (списываем токен)
                 const res = await fetch('/api/generate', {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ user_id: user.id, prompt: prompt })
                 });
+                
                 const data = await res.json();
 
                 if (data.success) {
                     balance = data.new_balance;
                     document.getElementById('balance-val').innerText = balance;
-                    document.getElementById('result-image').src = data.image_url;
+                    
+                    // Вставляем ссылку на прокси-картинку. 
+                    // Браузер сам загрузит её, и сработает событие onload
+                    img.src = data.image_url;
                     document.getElementById('download-link').href = data.image_url;
-                    document.getElementById('download-link').download = `ai_${Date.now()}.png`;
-                    document.getElementById('image-container').style.display = 'block';
+                    imgContainer.style.display = 'block';
                 } else {
-                    tg.showAlert(data.error || "Ошибка");
+                    tg.showAlert("❌ " + (data.error || "Ошибка"));
+                    btn.disabled = false;
+                    loader.style.display = 'none';
                 }
-            } catch (e) { tg.showAlert("Ошибка сервера"); } 
-            finally {
-                document.getElementById('gen-btn').disabled = false;
-                document.getElementById('loader').style.display = 'none';
+            } catch (e) { 
+                tg.showAlert("❌ Ошибка сети. Сервер не ответил вовремя.");
+                btn.disabled = false;
+                loader.style.display = 'none';
             }
         }
 
-        // Активация промокода
+        // Срабатывает, когда картинка полностью загрузилась в браузере
+        function imageLoaded() {
+            document.getElementById('loader').style.display = 'none';
+            document.getElementById('gen-btn').disabled = false;
+        }
+
+        // Обработка ошибки загрузки картинки
+        document.getElementById('result-image').onerror = function() {
+            tg.showAlert("❌ Не удалось загрузить картинку. Попробуйте другой промпт.");
+            document.getElementById('loader').style.display = 'none';
+            document.getElementById('gen-btn').disabled = false;
+        };
+
         async function redeemPromo() {
             const code = document.getElementById('promo-input').value;
             if (!code) return tg.showAlert("Введите код!");
-            
             try {
                 const res = await fetch('/api/promo', {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ user_id: user.id, code: code })
                 });
                 const data = await res.json();
-                
                 if (data.success) {
                     balance = data.new_balance;
                     document.getElementById('balance-val').innerText = balance;
@@ -369,7 +376,6 @@
             } catch (e) { tg.showAlert("Ошибка при активации"); }
         }
 
-        // Загрузка списка друзей
         async function loadFriends() {
             try {
                 const res = await fetch('/api/friends', {
@@ -396,7 +402,6 @@
             } catch (e) { console.error(e); }
         }
 
-        // Шаринг ссылки
         function shareRef() { 
             if(!refLink) return;
             tg.openTelegramLink(`https://t.me/share/url?url=${refLink}&text=Заходи в бота, генерируй картинки!`); 
@@ -408,10 +413,9 @@
             tg.showAlert("Ссылка скопирована!"); 
         }
 
-        // Инициализация при запуске
         if (user) {
             loadData();
         }
     </script>
 </body>
-</html>
+                </html>
