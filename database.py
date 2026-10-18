@@ -23,30 +23,14 @@ def init_db():
             referrals_count INTEGER DEFAULT 0,
             is_banned       BOOLEAN DEFAULT FALSE,
             tokens          INTEGER DEFAULT 0,
-            last_bonus_date DATE,
+            course_code     TEXT UNIQUE,
             created_at      TIMESTAMP DEFAULT NOW()
         )
     """)
     # Безопасно добавляем новые колонки
     cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_banned BOOLEAN DEFAULT FALSE")
     cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS tokens INTEGER DEFAULT 0")
-    cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS last_bonus_date DATE")
-    conn.commit()
-    cur.close()
-    conn.close()
-
-
-def init_promocodes_table():
-    conn = get_conn()
-    cur = conn.cursor()
-    cur.execute("""
-        CREATE TABLE IF NOT EXISTS promocodes (
-            code TEXT PRIMARY KEY,
-            reward INTEGER DEFAULT 1,
-            usage_limit INTEGER DEFAULT 100,
-            used_count INTEGER DEFAULT 0
-        )
-    """)
+    cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS course_code TEXT UNIQUE")
     conn.commit()
     cur.close()
     conn.close()
@@ -238,23 +222,6 @@ def get_all_user_ids(include_banned: bool = False) -> list:
     return [r["telegram_id"] for r in rows]
 
 
-def get_all_users_paginated(page: int, per_page: int = 10) -> dict:
-    offset = (page - 1) * per_page
-    conn = get_conn()
-    cur = conn.cursor()
-    cur.execute("SELECT COUNT(*) AS c FROM users")
-    total = cur.fetchone()["c"]
-    cur.execute(
-        "SELECT telegram_id, username, first_name, is_banned, created_at FROM users ORDER BY created_at DESC LIMIT %s OFFSET %s",
-        (per_page, offset)
-    )
-    rows = cur.fetchall()
-    cur.close()
-    conn.close()
-    total_pages = (total + per_page - 1) // per_page if total > 0 else 1
-    return {"users": rows, "total": total, "total_pages": total_pages, "page": page}
-
-
 # --- ТОКЕНЫ ---
 def add_tokens(telegram_id: int, amount: int):
     conn = get_conn()
@@ -286,49 +253,21 @@ def get_tokens(telegram_id: int) -> int:
     return user["tokens"] if user else 0
 
 
-# --- ПРОМОКОДЫ ---
-def create_promocode(code: str, reward: int, limit: int):
+# --- СИСТЕМА КУРСОВ ---
+def set_course_code(telegram_id: int, code: str):
     conn = get_conn()
     cur = conn.cursor()
-    cur.execute(
-        "INSERT INTO promocodes (code, reward, usage_limit) VALUES (%s, %s, %s) ON CONFLICT (code) DO NOTHING",
-        (code.upper(), reward, limit)
-    )
+    cur.execute("UPDATE users SET course_code = %s WHERE telegram_id = %s", (code, telegram_id))
     conn.commit()
     cur.close()
     conn.close()
 
 
-def redeem_promocode(telegram_id: int, code: str) -> dict:
+def get_user_by_course_code(code: str):
     conn = get_conn()
     cur = conn.cursor()
-    code = code.upper().strip()
-    cur.execute("SELECT reward, usage_limit, used_count FROM promocodes WHERE code = %s", (code,))
-    promo = cur.fetchone()
-    if not promo:
-        cur.close()
-        conn.close()
-        return {"success": False, "error": "Промокод не найден"}
-    if promo["used_count"] >= promo["usage_limit"]:
-        cur.close()
-        conn.close()
-        return {"success": False, "error": "Лимит использований исчерпан"}
-    cur.execute("UPDATE promocodes SET used_count = used_count + 1 WHERE code = %s", (code,))
-    cur.execute("UPDATE users SET tokens = tokens + %s WHERE telegram_id = %s", (promo["reward"], telegram_id))
-    conn.commit()
-    cur.execute("SELECT tokens FROM users WHERE telegram_id = %s", (telegram_id,))
-    new_balance = cur.fetchone()["tokens"]
+    cur.execute("SELECT telegram_id FROM users WHERE course_code = %s", (code,))
+    row = cur.fetchone()
     cur.close()
     conn.close()
-    return {"success": True, "reward": promo["reward"], "new_balance": new_balance}
-
-
-# --- СПИСОК ДРУЗЕЙ ---
-def get_invited_friends(telegram_id: int) -> list:
-    conn = get_conn()
-    cur = conn.cursor()
-    cur.execute("SELECT first_name, username FROM users WHERE referred_by = %s", (telegram_id,))
-    rows = cur.fetchall()
-    cur.close()
-    conn.close()
-    return rows
+    return row["telegram_id"] if row else None
