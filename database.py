@@ -35,6 +35,9 @@ def init_db():
     cur.close()
     conn.close()
 
+    # Создаем таблицу промокодов
+    init_promocodes_table()
+
 
 def get_user(telegram_id: int):
     conn = get_conn()
@@ -239,6 +242,16 @@ def get_all_users_paginated(page: int, per_page: int = 10) -> dict:
     return {"users": rows, "total": total, "total_pages": total_pages, "page": page}
 
 
+def get_invited_friends(telegram_id: int) -> list:
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("SELECT first_name, username FROM users WHERE referred_by = %s", (telegram_id,))
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+    return rows
+
+
 # --- ТОКЕНЫ ---
 def add_tokens(telegram_id: int, amount: int):
     conn = get_conn()
@@ -290,12 +303,54 @@ def get_user_by_course_code(code: str):
     return row["telegram_id"] if row else None
 
 
-# --- НОВАЯ ФУНКЦИЯ ДЛЯ "МОИ ДРУЗЬЯ" ---
-def get_invited_friends(telegram_id: int) -> list:
+# --- ПРОМОКОДЫ ---
+def init_promocodes_table():
     conn = get_conn()
     cur = conn.cursor()
-    cur.execute("SELECT first_name, username FROM users WHERE referred_by = %s", (telegram_id,))
-    rows = cur.fetchall()
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS promocodes (
+            code TEXT PRIMARY KEY,
+            reward INTEGER DEFAULT 1,
+            usage_limit INTEGER DEFAULT 100,
+            used_count INTEGER DEFAULT 0
+        )
+    """)
+    conn.commit()
     cur.close()
     conn.close()
-    return rows
+
+
+def create_promocode(code: str, reward: int, limit: int):
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute(
+        "INSERT INTO promocodes (code, reward, usage_limit) VALUES (%s, %s, %s) ON CONFLICT (code) DO NOTHING",
+        (code.upper(), reward, limit)
+    )
+    conn.commit()
+    cur.close()
+    conn.close()
+
+
+def redeem_promocode(telegram_id: int, code: str) -> dict:
+    conn = get_conn()
+    cur = conn.cursor()
+    code = code.upper().strip()
+    cur.execute("SELECT reward, usage_limit, used_count FROM promocodes WHERE code = %s", (code,))
+    promo = cur.fetchone()
+    if not promo:
+        cur.close()
+        conn.close()
+        return {"success": False, "error": "Промокод не найден"}
+    if promo["used_count"] >= promo["usage_limit"]:
+        cur.close()
+        conn.close()
+        return {"success": False, "error": "Лимит использований исчерпан"}
+    cur.execute("UPDATE promocodes SET used_count = used_count + 1 WHERE code = %s", (code,))
+    cur.execute("UPDATE users SET tokens = tokens + %s WHERE telegram_id = %s", (promo["reward"], telegram_id))
+    conn.commit()
+    cur.execute("SELECT tokens FROM users WHERE telegram_id = %s", (telegram_id,))
+    new_balance = cur.fetchone()["tokens"]
+    cur.close()
+    conn.close()
+    return {"success": True, "reward": promo["reward"], "new_balance": new_balance}
