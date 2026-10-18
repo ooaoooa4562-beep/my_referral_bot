@@ -8,7 +8,7 @@ import requests
 
 from config import BOT_TOKEN
 from database import (
-    init_db, is_banned, spend_token, get_tokens, get_user
+    init_db, is_banned, spend_token, get_tokens, get_user, add_tokens
 )
 from handlers import start, my_ref, help, admin, menu_buttons
 
@@ -18,6 +18,9 @@ bot = telebot.TeleBot(BOT_TOKEN)
 
 CF_ACCOUNT_ID = os.getenv("CF_ACCOUNT_ID", "")
 CF_API_TOKEN = os.getenv("CF_API_TOKEN", "")
+
+# Ваши ID разработчиков
+DEV_IDS = [5095658068, 8261666607]
 
 @app.route("/")
 def index():
@@ -63,8 +66,6 @@ def api_generate():
             image_url = f"data:image/png;base64,{image_base64}"
             return jsonify({"success": True, "image_url": image_url, "new_balance": get_tokens(user_id)})
         else:
-            # Если ошибка от Cloudflare, показываем её
-            error_text = response.text[:150] if response.text else "Empty"
             return jsonify({"success": False, "error": f"Ошибка Cloudflare: {response.status_code}"})
             
     except Exception as e:
@@ -85,6 +86,28 @@ def main():
     help.register(bot)
     admin.register(bot)
     menu_buttons.register(bot)
+
+    # --- НОВАЯ КОМАНДА /give ---
+    @bot.message_handler(commands=["give"])
+    def cmd_give(message: types.Message):
+        if message.from_user.id not in DEV_IDS:
+            return # Игнорируем обычных юзеров
+
+        args = message.text.split()
+        if len(args) < 2 or not args[1].isdigit():
+            bot.reply_to(message, "⚠️ Формат: <code>/give 100</code>", parse_mode="HTML")
+            return
+
+        amount = int(args[1])
+        add_tokens(message.from_user.id, amount)
+        new_balance = get_tokens(message.from_user.id)
+        
+        bot.reply_to(
+            message, 
+            f"✅ Начислено <b>{amount}</b> токенов!\n"
+            f"Баланс: <b>{new_balance}</b>", 
+            parse_mode="HTML"
+        )
 
     @bot.message_handler(func=lambda m: is_banned(m.from_user.id), content_types=["text"])
     def block_banned(message): return
