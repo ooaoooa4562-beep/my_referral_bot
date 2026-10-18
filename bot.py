@@ -1,7 +1,8 @@
 import os
+import base64
 import threading
 import telebot
-from flask import Flask, render_template, request, jsonify, Response
+from flask import Flask, render_template, request, jsonify
 from flask_cors import CORS
 import requests
 import urllib.parse
@@ -50,17 +51,8 @@ def api_generate():
     if not spend_token(user_id):
         return jsonify({"success": False, "error": "Недостаточно токенов"})
 
-    proxy_url = f"/api/proxy_image?prompt={urllib.parse.quote(prompt)}"
-    return jsonify({"success": True, "image_url": proxy_url, "new_balance": get_tokens(user_id)})
-
-@app.route("/api/proxy_image")
-def api_proxy_image():
-    prompt = request.args.get("prompt")
-    if not prompt:
-        return "Нет промпта", 400
-
-    # --- ПОПЫТКА 1: Cloudflare ---
     try:
+        # --- ПОПЫТКА 1: Cloudflare ---
         url = f"https://api.cloudflare.com/client/v4/accounts/{CF_ACCOUNT_ID}/ai/run/@cf/stabilityai/stable-diffusion-xl-base-1.0"
         headers = {"Authorization": f"Bearer {CF_API_TOKEN}"}
         payload = {"prompt": prompt}
@@ -69,26 +61,28 @@ def api_proxy_image():
         response = requests.post(url, headers=headers, json=payload, timeout=120)
         
         if response.status_code == 200:
-            return Response(response.content, mimetype='image/png')
+            image_base64 = base64.b64encode(response.content).decode("utf-8")
+            image_url = f"data:image/png;base64,{image_base64}"
+            return jsonify({"success": True, "image_url": image_url, "new_balance": get_tokens(user_id)})
         else:
-            print(f"⚠️ Cloudflare Error {response.status_code}: {response.text[:200]}")
+            print(f"⚠️ Cloudflare Error: {response.status_code}. Пробуем Pollinations...")
     except Exception as e:
-        print(f"⚠️ Cloudflare Exception: {e}")
+        print(f"⚠️ Cloudflare Exception: {e}. Пробуем Pollinations...")
 
-    # --- ПОПЫТКА 2: Pollinations (Резерв) ---
+    # --- ПОПЫТКА 2: Pollinations (Если Cloudflare упал) ---
     try:
         encoded_prompt = urllib.parse.quote(prompt)
-        fallback_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?model=turbo&nologo=true"
+        fallback_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?model=flux&nologo=true"
         
         fallback_resp = requests.get(fallback_url, timeout=120)
         if fallback_resp.status_code == 200:
-            return Response(fallback_resp.content, mimetype='image/png')
-        else:
-            print(f"⚠️ Pollinations Error {fallback_resp.status_code}")
+            image_base64 = base64.b64encode(fallback_resp.content).decode("utf-8")
+            image_url = f"data:image/png;base64,{image_base64}"
+            return jsonify({"success": True, "image_url": image_url, "new_balance": get_tokens(user_id)})
     except Exception as e:
         print(f"⚠️ Pollinations Exception: {e}")
 
-    return "Все генераторы недоступны. Проверьте ключи API.", 503
+    return jsonify({"success": False, "error": "Не удалось сгенерировать картинку. Попробуйте позже."})
 
 @app.route("/api/promo", methods=["POST"])
 def api_promo():
