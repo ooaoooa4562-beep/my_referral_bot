@@ -52,10 +52,10 @@ def api_generate():
     if not spend_token(user_id):
         return jsonify({"success": False, "error": "Недостаточно токенов"})
 
-    # --- ПОПЫТКА 1: Cloudflare (Быстрая модель Lightning) ---
+    # --- ПОПЫТКА 1: Cloudflare (Модель Lightning от ByteDance) ---
     try:
-        # Используем lightning для скорости
-        url = f"https://api.cloudflare.com/client/v4/accounts/{CF_ACCOUNT_ID}/ai/run/@cf/stabilityai/stable-diffusion-xl-lightning"
+        # ИСПРАВЛЕННЫЙ URL (bytedance вместо stabilityai)
+        url = f"https://api.cloudflare.com/client/v4/accounts/{CF_ACCOUNT_ID}/ai/run/@cf/bytedance/stable-diffusion-xl-lightning"
         headers = {"Authorization": f"Bearer {CF_API_TOKEN}"}
         payload = {"prompt": prompt}
 
